@@ -677,6 +677,71 @@ function Aurora:CreateWindow(titleText, subtitle)
 				label({ Text = t, TextSize = 12, TextColor3 = T.sub, Size = UDim2.new(1, -28, 1, 0), Position = UDim2.fromOffset(14, 0) }).Parent = r
 			end
 
+			-- Tiklayinca verilen metni panoya kopyalayan kart (Discord daveti vb.)
+			function Section:AddCopyCard(title, sub, copyText)
+				local r = row(58, title .. " " .. sub)
+				r.ClipsDescendants = true
+				hover(r)
+				local ic = new("Frame", { Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(12, 10), BackgroundColor3 = Color3.fromRGB(88, 101, 242), BorderSizePixel = 0 }, { corner(12) })
+				new("Frame", { Size = UDim2.fromOffset(22, 15), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.45), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, { corner(7) }).Parent = ic
+				new("Frame", { Size = UDim2.fromOffset(7, 7), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, -6, 0.45, 9), Rotation = 45, BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }).Parent = ic
+				new("Frame", { Size = UDim2.fromOffset(4, 4), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, -4, 0.45, 0), BackgroundColor3 = Color3.fromRGB(88, 101, 242), BorderSizePixel = 0, ZIndex = 2 }, { corner(2) }).Parent = ic
+				new("Frame", { Size = UDim2.fromOffset(4, 4), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 4, 0.45, 0), BackgroundColor3 = Color3.fromRGB(88, 101, 242), BorderSizePixel = 0, ZIndex = 2 }, { corner(2) }).Parent = ic
+				ic.Parent = r
+				label({ Text = title, Font = Enum.Font.GothamBold, TextSize = 14, Size = UDim2.new(1, -170, 0, 20), Position = UDim2.fromOffset(60, 11) }).Parent = r
+				label({ Text = sub, TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(1, -170, 0, 16), Position = UDim2.fromOffset(60, 31) }).Parent = r
+				local pill = new("Frame", { Size = UDim2.fromOffset(76, 26), Position = UDim2.new(1, -90, 0.5, -13), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, { corner(13) })
+				accentGrad(pill, 0)
+				local pillL = label({ Text = "COPY", Font = Enum.Font.GothamBlack, TextSize = 11, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) })
+				pillL.Parent = pill
+				pill.Parent = r
+				local b = new("TextButton", { Text = "", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, AutoButtonColor = false, ZIndex = 5 })
+				b.Parent = r
+				local token = 0
+				b.MouseButton1Click:Connect(function()
+					local mp = UIS:GetMouseLocation()
+					local rip = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(mp.X - r.AbsolutePosition.X, mp.Y - r.AbsolutePosition.Y), Size = UDim2.fromOffset(0, 0), BackgroundColor3 = accent, BackgroundTransparency = 0.6, BorderSizePixel = 0 }, { corner(200) })
+					rip.Parent = r
+					tween(rip, 0.55, { Size = UDim2.fromOffset(300, 300), BackgroundTransparency = 1 }).Completed:Connect(function() rip:Destroy() end)
+					local ok = pcall(function()
+						local clip = setclipboard or toclipboard
+						clip(copyText)
+					end)
+					token += 1
+					local my = token
+					if ok then
+						pillL.Text = "COPIED"
+						Aurora:Notify("Discord", "Davet linki kopyalandi.", 3, "success")
+					else
+						pillL.Text = "LINK"
+						Aurora:Notify("Discord", copyText, 8)
+					end
+					task.delay(1.5, function()
+						if my == token then pillL.Text = "COPY" end
+					end)
+				end)
+			end
+
+			-- Emegi gecen kisi satiri (avatar rozeti + isim + etiket)
+			function Section:AddCredit(name, role)
+				local r = row(52, name .. " " .. (role or ""))
+				hover(r)
+				local av = new("Frame", { Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(12, 9), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, { corner(17) })
+				accentGrad(av, 45)
+				label({ Text = string.upper(string.sub(name, 1, 1)), Font = Enum.Font.GothamBlack, TextSize = 15, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) }).Parent = av
+				av.Parent = r
+				label({ Text = name, Font = Enum.Font.GothamBold, TextSize = 14, Size = UDim2.new(1, -150, 0, 20), Position = UDim2.fromOffset(56, 9) }).Parent = r
+				label({ Text = role or "Emeği geçen", TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(1, -150, 0, 14), Position = UDim2.fromOffset(56, 29) }).Parent = r
+				local tag = new("Frame", { Size = UDim2.fromOffset(60, 20), Position = UDim2.new(1, -74, 0.5, -10), BackgroundColor3 = accent, BackgroundTransparency = 0.8, BorderSizePixel = 0 }, { corner(10) })
+				local tagL = label({ Text = "TEAM", Font = Enum.Font.GothamBlack, TextSize = 10, TextColor3 = accent, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) })
+				tagL.Parent = tag
+				onAccent(function(a)
+					tag.BackgroundColor3 = a
+					tagL.TextColor3 = a
+				end)
+				tag.Parent = r
+			end
+
 			function Section:AddButton(t, cb)
 				local r = row(40, t)
 				r.ClipsDescendants = true
@@ -2155,9 +2220,11 @@ local Window = Aurora:CreateWindow("Aurora X", "v2.0 - Ultimate Edition")
 -- 1. HOME SEKME
 local Home = Window:AddTab("Home", "o")
 Home:AddDashboard()
-local h2 = Home:AddSection("Info")
-h2:AddLabel("Arama kutusuyla tum ozellikleri filtreleyebilirsin.")
-h2:AddLabel("Bolum basliklarina tiklayarak katlayabilirsin.")
+local hDiscord = Home:AddSection("DISCORD")
+hDiscord:AddCopyCard("Discord Server", "discord.gg/tHUHTVzxxV", "https://discord.gg/tHUHTVzxxV")
+local hCredits = Home:AddSection("EMEĞİ GEÇENLER")
+hCredits:AddCredit("kpudfr")
+hCredits:AddCredit("3qr311")
 
 -- 2. PLAYER SEKME
 local Player = Window:AddTab("Player", "o")
