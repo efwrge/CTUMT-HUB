@@ -1,7 +1,10 @@
 --[[
   AURORA X - ULTIMATE INTEGRATED SCRIPT (Mobile Optimized Edition)
-  - Mobil cihazlar için ekran ölçeklendirmesi ve başlangıç boyutu optimize edildi.
+  - Mobil cihazlar icin ekran olceklendirmesi ve baslangic boyutu optimize edildi.
 ]]
+
+print("[Aurora] script basladi")
+local __ok, __err = xpcall(function()
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -40,6 +43,22 @@ local ACCENTS = {
 	Mint = Color3.fromRGB(52, 214, 168),
 	Rose = Color3.fromRGB(255, 94, 145),
 	Amber = Color3.fromRGB(255, 176, 64),
+	Crimson = Color3.fromRGB(225, 40, 65),
+	Red = Color3.fromRGB(255, 70, 70),
+	Orange = Color3.fromRGB(255, 120, 40),
+	Gold = Color3.fromRGB(255, 205, 60),
+	Lime = Color3.fromRGB(160, 235, 60),
+	Emerald = Color3.fromRGB(30, 205, 105),
+	Teal = Color3.fromRGB(20, 185, 170),
+	Cyan = Color3.fromRGB(40, 220, 240),
+	Sky = Color3.fromRGB(105, 185, 255),
+	Blue = Color3.fromRGB(65, 110, 255),
+	Indigo = Color3.fromRGB(105, 90, 240),
+	Purple = Color3.fromRGB(180, 90, 255),
+	Magenta = Color3.fromRGB(240, 60, 220),
+	Pink = Color3.fromRGB(255, 135, 200),
+	Silver = Color3.fromRGB(190, 198, 215),
+	White = Color3.fromRGB(240, 240, 250),
 }
 
 local function shift(c)
@@ -130,9 +149,12 @@ end
 
 local function makeDrag(track, fn)
 	local dragging = false
+	local sf = nil
 	track.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
+			sf = track:FindFirstAncestorOfClass("ScrollingFrame")
+			if sf then sf.ScrollingEnabled = false end
 			fn(math.clamp((i.Position.X - track.AbsolutePosition.X) / math.max(1, track.AbsoluteSize.X), 0, 1))
 		end
 	end)
@@ -142,7 +164,10 @@ local function makeDrag(track, fn)
 		end
 	end)
 	UIS.InputEnded:Connect(function(i)
-		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging = false end
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+			if sf then sf.ScrollingEnabled = true sf = nil end
+		end
 	end)
 end
 
@@ -154,7 +179,7 @@ local function getParent()
 end
 local host = getParent()
 local oldGui = host:FindFirstChild("AuroraX")
-if oldGui then oldGui:Destroy() end
+if oldGui then warn("[Aurora] eski pencere kapatildi (script ikinci kez calistirildi)") oldGui:Destroy() end
 
 local gui = new("ScreenGui", { Name = "AuroraX", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 100, IgnoreGuiInset = true })
 gui.Parent = host
@@ -162,7 +187,7 @@ gui.Parent = host
 local conns = {}
 gui.Destroying:Connect(function() for _, c in ipairs(conns) do c:Disconnect() end end)
 
------------------------------------------------------------------- BİLDİRİMLER
+------------------------------------------------------------------ BILDIRIMLER
 local notifHolder = new("Frame", { Size = UDim2.new(0, 300, 1, -28), Position = UDim2.new(1, -316, 0, 14), BackgroundTransparency = 1 }, {
 	new("UIListLayout", { Padding = UDim.new(0, 10), VerticalAlignment = Enum.VerticalAlignment.Bottom, SortOrder = Enum.SortOrder.LayoutOrder }),
 })
@@ -213,7 +238,7 @@ function Aurora:Notify(title, body, duration, kind)
 	end)
 end
 
------------------------------------------------------------------- PENCERE & UI MİMARİSİ
+------------------------------------------------------------------ PENCERE & UI MIMARISI
 function Aurora:CreateWindow(titleText, subtitle)
 	local Window = {}
 	local tabs, tabBtns, rows = {}, {}, {}
@@ -222,7 +247,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 
 	local holder = new("Frame", { Name = "Holder", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(W, H), BackgroundTransparency = 1, Visible = false })
 	
-	-- MOBİL İÇİN DÜZENLENDİ: Telefon ekranlarında devasa durmaması için otomatik küçültme oranı eklendi
+	-- MOBIL ICIN DUZENLENDI: Telefon ekranlarinda devasa durmamasi icin otomatik kucultme orani eklendi
 	local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
 	local initialScale = isMobile and 0.65 or 0.85
 	local uiscale = new("UIScale", { Scale = initialScale })
@@ -296,7 +321,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 		end
 	end))
 
-	------------------------------------------------ ÜST ÇUBUK
+	------------------------------------------------ UST CUBUK
 	local top = new("Frame", { Size = UDim2.new(1, 0, 0, TOP), BackgroundTransparency = 1, ZIndex = 2 })
 	top.Parent = win
 	local topDivider = new("Frame", { Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1), BackgroundColor3 = T.line, BackgroundTransparency = 0.3, BorderSizePixel = 0 })
@@ -307,23 +332,33 @@ function Aurora:CreateWindow(titleText, subtitle)
 	accentGrad(logo, 45)
 	label({ Text = "A", Font = Enum.Font.GothamBlack, TextSize = 17, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) }).Parent = logo
 	logo.Parent = top
-	label({ Text = titleText or "Aurora X", Font = Enum.Font.GothamBold, TextSize = 16, Size = UDim2.new(180, 20), Position = UDim2.fromOffset(60, 9), TextColor3 = T.text }).Parent = top
-	local subtitleLabel = label({ Text = subtitle or "v2.0", TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(180, 14), Position = UDim2.fromOffset(60, 29) })
+	label({ Text = titleText or "Aurora X", Font = Enum.Font.GothamBold, TextSize = 16, Size = UDim2.fromOffset(180, 20), Position = UDim2.fromOffset(60, 9), TextColor3 = T.text }).Parent = top
+	local subtitleLabel = label({ Text = subtitle or "v2.0", TextSize = 11, TextColor3 = T.dim, Size = UDim2.fromOffset(180, 14), Position = UDim2.fromOffset(60, 29) })
 	subtitleLabel.Parent = top
 	onThemeChange(function(k, c) if k == "dim" then subtitleLabel.TextColor3 = c end end)
 
-	local searchBox = new("Frame", { Size = UDim2.fromOffset(210, 32), Position = UDim2.new(1, -330, 0, 11), BackgroundColor3 = T.row, BorderSizePixel = 0 }, { corner(10), stroke(T.line, 1, 0.3) })
+	local searchBox = new("Frame", { Size = UDim2.fromOffset(210, 32), Position = UDim2.new(1, -330, 0, 11), BackgroundColor3 = T.row, BorderSizePixel = 0, ClipsDescendants = true }, { corner(10), stroke(T.line, 1, 0.3) })
 	onThemeChange(function(k, c) if k == "row" then searchBox.BackgroundColor3 = c end end)
 	label({ Text = "?", TextSize = 17, TextColor3 = T.dim, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromOffset(30, 32) }).Parent = searchBox
 	local search = new("TextBox", {
 		Size = UDim2.new(1, -38, 1, 0), Position = UDim2.fromOffset(30, 0), BackgroundTransparency = 1, Text = "", PlaceholderText = "Search features...",
 		PlaceholderColor3 = T.dim, TextColor3 = T.text, Font = Enum.Font.GothamMedium, TextSize = 12, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left,
+		ClipsDescendants = true, TextWrapped = false, MultiLine = false,
 	})
 	search.Parent = searchBox
 	searchBox.Parent = top
 	local sStroke = searchBox:FindFirstChildOfClass("UIStroke")
-	search.Focused:Connect(function() tween(sStroke, 0.2, { Color = accent, Transparency = 0 }) end)
-	search.FocusLost:Connect(function() tween(sStroke, 0.2, { Color = T.line, Transparency = 0.3 }) end)
+	local sFocused = false
+	search.Focused:Connect(function()
+		sFocused = true
+		tween(sStroke, 0.2, { Color = accent, Transparency = 0 })
+	end)
+	search.FocusLost:Connect(function()
+		sFocused = false
+		tween(sStroke, 0.2, { Color = T.line, Transparency = 0.3 })
+	end)
+	onAccent(function(a) if sFocused then sStroke.Color = a end end)
+	onThemeChange(function(k, c) if k == "line" and not sFocused then sStroke.Color = c end end)
 
 	local function topBtn(txt, x, hover)
 		local b = new("TextButton", { Text = txt, Size = UDim2.fromOffset(32, 32), Position = UDim2.new(1, x, 0, 11), BackgroundColor3 = hover, BackgroundTransparency = 1, TextColor3 = T.sub, Font = Enum.Font.GothamBold, TextSize = 13, AutoButtonColor = false }, { corner(10) })
@@ -335,7 +370,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 	local closeB = topBtn("X", -46, T.err)
 	local minB = topBtn("-", -82, T.row2)
 
-	------------------------------------------------ YAN MENÜ
+	------------------------------------------------ YAN MENU
 	local side = new("Frame", { Size = UDim2.new(0, SIDE, 1, -TOP - STATUS), Position = UDim2.fromOffset(0, TOP), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2 })
 	side.Parent = win
 	local sideDivider = new("Frame", { Size = UDim2.new(0, 1, 1, -TOP - STATUS), Position = UDim2.fromOffset(SIDE, TOP), BackgroundColor3 = T.line, BackgroundTransparency = 0.3, BorderSizePixel = 0, ZIndex = 2 })
@@ -368,7 +403,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 	local pagesHolder = new("Frame", { Size = UDim2.new(1, -SIDE - 1, 1, -TOP - STATUS), Position = UDim2.fromOffset(SIDE + 1, TOP), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 2 })
 	pagesHolder.Parent = win
 
-	------------------------------------------------ DURUM ÇUBUĞU
+	------------------------------------------------ DURUM CUBUGU
 	local sb = new("Frame", { Size = UDim2.new(1, 0, 0, STATUS), Position = UDim2.new(0, 0, 1, -STATUS), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 3 })
 	local sbDivider = new("Frame", { Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = T.line, BackgroundTransparency = 0.3, BorderSizePixel = 0 })
 	sbDivider.Parent = sb
@@ -406,7 +441,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 		end))
 	end
 
-	------------------------------------------------ SÜRÜKLEME
+	------------------------------------------------ SURUKLEME
 	do
 		local dragging, startPos, startIn
 		top.InputBegan:Connect(function(i)
@@ -423,7 +458,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 		end)
 	end
 
-	------------------------------------------------ AÇ / KAPA & MOBİL LAUNCHER
+	------------------------------------------------ AC / KAPA & MOBIL LAUNCHER
 	local lBase = math.min(2, math.max(1, fitScale()))
 	local launcher = new("TextButton", { Name = "Launcher", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 20, 1, -20), Size = UDim2.fromOffset(56, 56), BackgroundColor3 = T.bg0, BorderSizePixel = 0, Visible = true, ZIndex = 20 }, { corner(18) })
 	onThemeChange(function(k, c) if k == "bg0" then launcher.BackgroundColor3 = c end end)
@@ -439,6 +474,31 @@ function Aurora:CreateWindow(titleText, subtitle)
 	launcher.Parent = gui
 	launcher.MouseEnter:Connect(function() tween(lScale, 0.15, { Scale = lBase * 1.1 }) end)
 	launcher.MouseLeave:Connect(function() tween(lScale, 0.15, { Scale = lBase }) end)
+
+	-- kutuyu basili tutup surukle (mouse ve dokunmatik)
+	local lMoved = false
+	do
+		local ldrag, lstartIn, lstartPos = false, nil, nil
+		launcher.InputBegan:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				ldrag, lMoved, lstartIn, lstartPos = true, false, i.Position, launcher.Position
+				i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then ldrag = false end end)
+			end
+		end)
+		table.insert(conns, UIS.InputChanged:Connect(function(i)
+			if ldrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+				local d = i.Position - lstartIn
+				if not lMoved and d.Magnitude > 8 then lMoved = true end
+				if lMoved then
+					local vp = workspace.CurrentCamera.ViewportSize
+					local sz = 58 * lScale.Scale
+					local nx = math.clamp(lstartPos.X.Offset + d.X, 0, math.max(0, vp.X - sz))
+					local ny = math.clamp(lstartPos.Y.Offset + d.Y, -math.max(0, vp.Y - sz), 0)
+					launcher.Position = UDim2.new(lstartPos.X.Scale, math.floor(nx), lstartPos.Y.Scale, math.floor(ny))
+				end
+			end
+		end))
+	end
 
 	local isOpen, snapped = false, false
 	local function setOpen(v)
@@ -463,6 +523,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 		if not gp and i.KeyCode == Enum.KeyCode.RightShift then setOpen(not isOpen) end
 	end))
 	closeB.MouseButton1Click:Connect(function()
+		warn("[Aurora] X butonuna basildi, pencere kapatiliyor")
 		setOpen(false)
 		task.delay(0.3, function() gui:Destroy() end)
 	end)
@@ -476,14 +537,31 @@ function Aurora:CreateWindow(titleText, subtitle)
 			end
 		end)
 	end)
-	launcher.MouseButton1Click:Connect(function() setOpen(true) end)
+	launcher.MouseButton1Click:Connect(function()
+		if lMoved then lMoved = false return end -- surukleme tiklama sayilmasin
+		setOpen(true)
+	end)
 
 	------------------------------------------------ ARAMA
+	local searchToken = 0
 	search:GetPropertyChangedSignal("Text"):Connect(function()
-		local q = string.lower(search.Text)
-		for _, r in ipairs(rows) do
-			r.frame.Visible = q == "" or string.find(r.name, q, 1, true) ~= nil
+		-- cok uzun yazi kutudan tasmasin / fps dusurmesin: 32 karakterle sinirla
+		if #search.Text > 32 then
+			search.Text = string.sub(search.Text, 1, 32)
+			return
 		end
+		-- her tusta tum satirlari taramak yerine kisa bir bekleme (debounce) ile bir kez filtrele
+		searchToken = searchToken + 1
+		local my = searchToken
+		task.delay(0.12, function()
+			if my ~= searchToken then return end
+			local q = string.lower(search.Text)
+			for _, r in ipairs(rows) do
+				if r.frame.Parent then
+					r.frame.Visible = q == "" or string.find(r.name, q, 1, true) ~= nil
+				end
+			end
+		end)
 	end)
 
 	------------------------------------------------ SEKMELER
@@ -523,7 +601,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 	-- Sekme adina gore secilir (adi icinde anahtar kelime gecenler de eslesir).
 	local ICON_KEYS = {
 		{ "home", "home" }, { "player", "player" }, { "visual", "visuals" }, { "esp", "esp" },
-		{ "aim", "aimbot" }, { "hit", "hitbox" }, { "setting", "settings" }, { "config", "settings" },
+		{ "aim", "aimbot" }, { "hit", "hitbox" }, { "setting", "settings" }, { "config", "settings" }, { "teleport", "teleport" },
 	}
 	local function tabIconKind(tabName)
 		local lower = string.lower(tabName or "")
@@ -582,6 +660,9 @@ function Aurora:CreateWindow(titleText, subtitle)
 		elseif kind == "hitbox" then
 			ring(2, 7, 10, 10, 2, 1.6)
 			ring(8, 2, 10, 10, 2, 1.6)
+		elseif kind == "teleport" then
+			ring(5, 1, 10, 18, "c", 1.6)
+			ring(8, 5, 4, 10, "c", 1.4)
 		elseif kind == "settings" then
 			rect(2, 4, 7, 2, 1) rect(11, 2, 6, 6, "c")
 			rect(12, 9, 6, 2, 1) rect(4, 7, 6, 6, "c")
@@ -677,6 +758,16 @@ function Aurora:CreateWindow(titleText, subtitle)
 				label({ Text = t, TextSize = 12, TextColor3 = T.sub, Size = UDim2.new(1, -28, 1, 0), Position = UDim2.fromOffset(14, 0) }).Parent = r
 			end
 
+			-- Ozel icerik icin bos, otomatik boyutlanan kap (liste vb.)
+			function Section:AddContainer()
+				local r = row(0, "")
+				r.BackgroundTransparency = 1
+				r.AutomaticSize = Enum.AutomaticSize.Y
+				r.Size = UDim2.new(1, 0, 0, 0)
+				list(4).Parent = r
+				return r
+			end
+
 			-- Tiklayinca verilen metni panoya kopyalayan kart (Discord daveti vb.)
 			function Section:AddCopyCard(title, sub, copyText)
 				local r = row(58, title .. " " .. sub)
@@ -707,7 +798,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 						local clip = setclipboard or toclipboard
 						clip(copyText)
 					end)
-					token += 1
+					token = token + 1
 					local my = token
 					if ok then
 						pillL.Text = "COPIED"
@@ -731,7 +822,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 				label({ Text = string.upper(string.sub(name, 1, 1)), Font = Enum.Font.GothamBlack, TextSize = 15, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) }).Parent = av
 				av.Parent = r
 				label({ Text = name, Font = Enum.Font.GothamBold, TextSize = 14, Size = UDim2.new(1, -150, 0, 20), Position = UDim2.fromOffset(56, 9) }).Parent = r
-				label({ Text = role or "Emeği geçen", TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(1, -150, 0, 14), Position = UDim2.fromOffset(56, 29) }).Parent = r
+				label({ Text = role or "Emegi gecen", TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(1, -150, 0, 14), Position = UDim2.fromOffset(56, 29) }).Parent = r
 				local tag = new("Frame", { Size = UDim2.fromOffset(60, 20), Position = UDim2.new(1, -74, 0.5, -10), BackgroundColor3 = accent, BackgroundTransparency = 0.8, BorderSizePixel = 0 }, { corner(10) })
 				local tagL = label({ Text = "TEAM", Font = Enum.Font.GothamBlack, TextSize = 10, TextColor3 = accent, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) })
 				tagL.Parent = tag
@@ -1208,7 +1299,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 	return Window
 end
 
------------------------------------------------------------------- OYUNCU & VİSUALS KONTROL ENFORCER
+------------------------------------------------------------------ OYUNCU & VISUALS KONTROL ENFORCER
 local customWalkSpeed = 16
 local walkSpeedEnabled = false
 local customJumpPower = 50
@@ -1240,7 +1331,257 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
------------------------------------------------------------------- SAF ESP MODÜLÜ ENTEGRASYONU
+
+------------------------------------------------------------------ CUSTOM SKY
+local SkyAPI = (function()
+	local function C(r, g, b) return Color3.fromRGB(r, g, b) end
+	local SKY = { Name = "Default", Cur = nil, Particles = true, Density = 1, useTime = true, over = {} }
+	local orig = nil
+	local hidden = {}
+	local fxPart, fxEm = nil, nil
+	local acc = 0
+
+	local PRESETS = {
+		Space = { time = 0, amb = C(8, 8, 28), out = C(25, 20, 60), top = C(90, 50, 220), bot = C(10, 10, 40), fog = C(4, 4, 18), fs = 0, fe = 100000, bri = 1, exp = 0.2,
+			atmo = { d = 0, col = C(0, 0, 0), dec = C(0, 0, 0), gl = 0, hz = 0 }, tint = C(205, 195, 255), sat = 0.25, con = 0.15, cb = -0.02,
+			bloom = { 0.9, 30, 1.4 }, rays = 0, stars = 5000, blank = true,
+			fx = { rate = 25, c1 = C(255, 255, 255), c2 = C(170, 150, 255), size = 0.35, speed = 1.5, life = 12, acc = Vector3.new(0, 0, 0), light = 1, tr = 0.1, spread = 180, up = false } },
+		Galaxy = { time = 0, amb = C(40, 15, 70), out = C(70, 25, 120), top = C(255, 80, 200), bot = C(40, 20, 120), fog = C(30, 10, 60), fs = 0, fe = 6000, bri = 1.2, exp = 0.1,
+			atmo = { d = 0.1, col = C(160, 60, 220), dec = C(255, 90, 200), gl = 1, hz = 1 }, tint = C(255, 190, 255), sat = 0.35, con = 0.12, cb = 0,
+			bloom = { 1.2, 40, 1.2 }, rays = 0, stars = 5000, blank = true,
+			fx = { rate = 35, c1 = C(255, 120, 230), c2 = C(120, 160, 255), size = 0.45, speed = 2, life = 10, acc = Vector3.new(0, 0, 0), light = 1, tr = 0.1, spread = 180, up = false } },
+		Sakura = { time = 17.3, amb = C(190, 130, 150), out = C(225, 160, 180), top = C(255, 170, 200), bot = C(200, 130, 160), fog = C(255, 205, 220), fs = 40, fe = 900, bri = 2.2, exp = 0.1,
+			atmo = { d = 0.35, col = C(255, 200, 220), dec = C(255, 150, 190), gl = 0.5, hz = 1.2 }, tint = C(255, 220, 235), sat = 0.15, con = 0.05, cb = 0.02,
+			bloom = { 0.5, 24, 1.8 }, rays = 0.1, stars = 0,
+			fx = { rate = 45, c1 = C(255, 175, 205), c2 = C(255, 220, 232), size = 0.55, speed = 5, life = 9, acc = Vector3.new(3, 0, 1.5), light = 0.2, tr = 0.1, spread = 25, up = false } },
+		Snow = { time = 12, amb = C(150, 160, 175), out = C(180, 190, 205), top = C(220, 235, 255), bot = C(150, 165, 185), fog = C(215, 225, 238), fs = 20, fe = 600, bri = 2, exp = 0,
+			atmo = { d = 0.4, col = C(215, 225, 240), dec = C(190, 205, 225), gl = 0.2, hz = 2 }, tint = C(225, 235, 255), sat = -0.15, con = 0.05, cb = 0.03,
+			bloom = { 0.3, 20, 2 }, rays = 0, stars = 0,
+			fx = { rate = 80, c1 = C(255, 255, 255), c2 = C(225, 240, 255), size = 0.4, speed = 8, life = 7, acc = Vector3.new(2, 0, 0), light = 0.3, tr = 0, spread = 20, up = false } },
+		Sunset = { time = 18.2, amb = C(150, 100, 90), out = C(210, 130, 90), top = C(255, 140, 70), bot = C(190, 90, 100), fog = C(255, 160, 100), fs = 60, fe = 1500, bri = 2.4, exp = 0.15,
+			atmo = { d = 0.38, col = C(255, 170, 110), dec = C(255, 110, 70), gl = 1.5, hz = 1.5 }, tint = C(255, 225, 200), sat = 0.2, con = 0.1, cb = 0,
+			bloom = { 0.6, 28, 1.6 }, rays = 0.25, stars = 0 },
+		Dawn = { time = 6.1, amb = C(150, 140, 175), out = C(190, 170, 200), top = C(255, 190, 170), bot = C(170, 160, 200), fog = C(240, 200, 210), fs = 40, fe = 1200, bri = 2, exp = 0.05,
+			atmo = { d = 0.33, col = C(250, 205, 215), dec = C(240, 170, 180), gl = 0.8, hz = 1.3 }, tint = C(255, 235, 240), sat = 0.1, con = 0.04, cb = 0.02,
+			bloom = { 0.4, 24, 1.8 }, rays = 0.15, stars = 0 },
+		Midnight = { time = 0, amb = C(30, 40, 80), out = C(45, 60, 110), top = C(60, 80, 160), bot = C(20, 25, 55), fog = C(15, 20, 45), fs = 50, fe = 1500, bri = 1.2, exp = -0.1,
+			atmo = { d = 0.3, col = C(40, 55, 110), dec = C(25, 35, 80), gl = 0, hz = 1 }, tint = C(190, 205, 255), sat = -0.1, con = 0.1, cb = -0.02,
+			bloom = { 0.4, 24, 1.8 }, rays = 0, stars = 3500 },
+		Neon = { time = 0, amb = C(60, 20, 90), out = C(40, 60, 120), top = C(255, 40, 200), bot = C(40, 220, 255), fog = C(50, 10, 80), fs = 30, fe = 1200, bri = 1.6, exp = 0.15,
+			atmo = { d = 0.3, col = C(255, 60, 210), dec = C(60, 220, 255), gl = 2, hz = 1.5 }, tint = C(255, 200, 255), sat = 0.5, con = 0.2, cb = 0,
+			bloom = { 1.5, 40, 1 }, rays = 0, stars = 2500,
+			fx = { rate = 30, c1 = C(255, 60, 220), c2 = C(60, 230, 255), size = 0.4, speed = 5, life = 8, acc = Vector3.new(0, 0, 0), light = 1, tr = 0.1, spread = 30, up = false } },
+		BloodMoon = { time = 0, amb = C(110, 20, 25), out = C(140, 25, 30), top = C(220, 30, 30), bot = C(70, 10, 15), fog = C(80, 10, 15), fs = 30, fe = 900, bri = 1.4, exp = 0,
+			atmo = { d = 0.42, col = C(180, 30, 30), dec = C(120, 15, 20), gl = 1, hz = 2 }, tint = C(255, 170, 170), sat = 0.1, con = 0.15, cb = -0.03,
+			bloom = { 0.5, 24, 1.6 }, rays = 0, stars = 1500,
+			fx = { rate = 22, c1 = C(255, 60, 40), c2 = C(140, 10, 10), size = 0.4, speed = 3, life = 9, acc = Vector3.new(0, 0, 0), light = 0.6, tr = 0.2, spread = 25, up = true } },
+		Toxic = { time = 16, amb = C(50, 110, 40), out = C(80, 150, 50), top = C(150, 255, 60), bot = C(40, 90, 30), fog = C(90, 150, 40), fs = 20, fe = 700, bri = 1.8, exp = 0,
+			atmo = { d = 0.45, col = C(140, 220, 60), dec = C(80, 160, 30), gl = 0.4, hz = 2.5 }, tint = C(220, 255, 190), sat = 0.2, con = 0.1, cb = 0,
+			bloom = { 0.6, 24, 1.6 }, rays = 0, stars = 0,
+			fx = { rate = 25, c1 = C(170, 255, 80), c2 = C(90, 200, 40), size = 0.5, speed = 2.5, life = 9, acc = Vector3.new(0, 0, 0), light = 0.6, tr = 0.2, spread = 30, up = true } },
+		Aurora = { time = 0, amb = C(20, 70, 70), out = C(30, 110, 100), top = C(60, 255, 190), bot = C(30, 60, 120), fog = C(15, 50, 60), fs = 60, fe = 2000, bri = 1.5, exp = 0,
+			atmo = { d = 0.25, col = C(70, 230, 190), dec = C(110, 90, 230), gl = 1.2, hz = 1 }, tint = C(200, 255, 235), sat = 0.3, con = 0.1, cb = 0,
+			bloom = { 1, 34, 1.3 }, rays = 0, stars = 4500,
+			fx = { rate = 18, c1 = C(90, 255, 200), c2 = C(140, 120, 255), size = 0.5, speed = 1.5, life = 12, acc = Vector3.new(1, 0, 0), light = 1, tr = 0.3, spread = 180, up = false } },
+		Mist = { time = 9, amb = C(110, 125, 115), out = C(130, 145, 135), top = C(170, 190, 180), bot = C(110, 125, 118), fog = C(170, 185, 175), fs = 5, fe = 250, bri = 1.4, exp = -0.05,
+			atmo = { d = 0.55, col = C(180, 195, 185), dec = C(150, 170, 160), gl = 0, hz = 3 }, tint = C(220, 235, 225), sat = -0.2, con = 0.05, cb = 0,
+			bloom = { 0.2, 20, 2 }, rays = 0, stars = 0 },
+		Volcano = { time = 19, amb = C(120, 50, 20), out = C(160, 60, 20), top = C(255, 90, 20), bot = C(90, 30, 15), fog = C(100, 35, 15), fs = 20, fe = 800, bri = 1.8, exp = 0.1,
+			atmo = { d = 0.45, col = C(220, 90, 40), dec = C(150, 50, 20), gl = 1, hz = 2.5 }, tint = C(255, 195, 150), sat = 0.2, con = 0.15, cb = 0,
+			bloom = { 0.8, 28, 1.4 }, rays = 0.1, stars = 0,
+			fx = { rate = 40, c1 = C(255, 170, 40), c2 = C(255, 60, 10), size = 0.35, speed = 6, life = 6, acc = Vector3.new(1, 0, 0), light = 1, tr = 0.1, spread = 35, up = true } },
+		Desert = { time = 13.5, amb = C(190, 160, 110), out = C(215, 180, 120), top = C(255, 210, 140), bot = C(200, 160, 100), fog = C(235, 200, 150), fs = 30, fe = 1100, bri = 3, exp = 0.2,
+			atmo = { d = 0.4, col = C(240, 205, 150), dec = C(220, 170, 100), gl = 0.6, hz = 2 }, tint = C(255, 235, 195), sat = 0.1, con = 0.1, cb = 0.02,
+			bloom = { 0.5, 24, 1.8 }, rays = 0.1, stars = 0,
+			fx = { rate = 30, c1 = C(235, 200, 150), c2 = C(215, 175, 120), size = 0.4, speed = 9, life = 5, acc = Vector3.new(8, 0, 0), light = 0, tr = 0.4, spread = 20, up = false } },
+	}
+	local ORDER = { "Default", "Space", "Galaxy", "Sakura", "Snow", "Sunset", "Dawn", "Midnight", "Neon", "BloodMoon", "Toxic", "Aurora", "Mist", "Volcano", "Desert" }
+
+	local function save()
+		if orig then return end
+		orig = { Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Top = Lighting.ColorShift_Top, Bot = Lighting.ColorShift_Bottom,
+			FogColor = Lighting.FogColor, FogStart = Lighting.FogStart, FogEnd = Lighting.FogEnd, Brightness = Lighting.Brightness,
+			Exposure = Lighting.ExposureCompensation, ClockTime = Lighting.ClockTime }
+	end
+	local function ensure(class, name)
+		local o = Lighting:FindFirstChild(name)
+		if o and not o:IsA(class) then o:Destroy() o = nil end
+		if not o then
+			o = Instance.new(class)
+			o.Name = name
+			o.Parent = Lighting
+		end
+		return o
+	end
+	local function hideForeign()
+		for _, o in ipairs(Lighting:GetChildren()) do
+			if (o:IsA("Sky") or o:IsA("Atmosphere")) and string.sub(o.Name, 1, 10) ~= "AuroraSky_" then
+				table.insert(hidden, { o, o.Parent })
+				o.Parent = nil
+			end
+		end
+	end
+
+	local function applyLight(p)
+		local tm = SKY.over.time
+		if tm == nil and SKY.useTime then tm = p.time end
+		if tm ~= nil then
+			Lighting.ClockTime = tm
+			enforcedClockTime = tm
+		else
+			enforcedClockTime = nil
+		end
+		local a = ensure("Atmosphere", "AuroraSky_Atmo")
+		a.Density = SKY.over.dens or p.atmo.d
+		a.Offset = 0
+		a.Color = SKY.over.acol or p.atmo.col
+		a.Decay = SKY.over.dec or p.atmo.dec
+		a.Glare = p.atmo.gl
+		a.Haze = p.atmo.hz
+		for _, n in ipairs({ "AuroraSky_CC", "AuroraSky_Bloom", "AuroraSky_Rays" }) do
+			local o = Lighting:FindFirstChild(n)
+			if o then o:Destroy() end
+		end
+		local sk = Lighting:FindFirstChild("AuroraSky_Sky")
+		if sk and sk:GetAttribute("blank") ~= (p.blank and true or false) then sk:Destroy() end
+		sk = ensure("Sky", "AuroraSky_Sky")
+		sk:SetAttribute("blank", p.blank and true or false)
+		sk.StarCount = SKY.over.stars or p.stars or 0
+		sk.CelestialBodiesShown = true
+		if p.blank then
+			sk.SkyboxBk = "" sk.SkyboxDn = "" sk.SkyboxFt = "" sk.SkyboxLf = "" sk.SkyboxRt = "" sk.SkyboxUp = ""
+		end
+	end
+
+	local function fxClear()
+		if fxPart then fxPart:Destroy() end
+		fxPart, fxEm = nil, nil
+	end
+	local function fxBuild(p)
+		fxClear()
+		if not p or not p.fx or not SKY.Particles then return end
+		local f = p.fx
+		local part = Instance.new("Part")
+		part.Name = "AuroraSkyFX"
+		part.Anchored = true
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CanTouch = false
+		part.CastShadow = false
+		part.Transparency = 1
+		part.Size = Vector3.new(80, 1, 80)
+		local em = Instance.new("ParticleEmitter")
+		em.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+		em.Color = ColorSequence.new(f.c1, f.c2)
+		em.Size = NumberSequence.new(f.size)
+		em.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.15, f.tr), NumberSequenceKeypoint.new(0.85, f.tr), NumberSequenceKeypoint.new(1, 1) })
+		em.Lifetime = NumberRange.new(f.life * 0.8, f.life * 1.2)
+		em.Speed = NumberRange.new(f.speed * 0.7, f.speed * 1.3)
+		em.Rate = f.rate * SKY.Density
+		em.Acceleration = f.acc
+		em.EmissionDirection = f.up and Enum.NormalId.Top or Enum.NormalId.Bottom
+		em.SpreadAngle = Vector2.new(f.spread, f.spread)
+		em.Rotation = NumberRange.new(0, 360)
+		em.RotSpeed = NumberRange.new(-60, 60)
+		em.LightEmission = f.light
+		em.LockedToPart = false
+		em.Parent = part
+		part.Parent = workspace.CurrentCamera
+		fxPart, fxEm = part, em
+		fxPart:SetAttribute("up", f.up and true or false)
+	end
+
+	local function reset()
+		SKY.Cur = nil
+		SKY.Name = "Default"
+		SKY.over = {}
+		fxClear()
+		for _, n in ipairs({ "AuroraSky_Atmo", "AuroraSky_CC", "AuroraSky_Bloom", "AuroraSky_Rays", "AuroraSky_Sky" }) do
+			local o = Lighting:FindFirstChild(n)
+			if o then o:Destroy() end
+		end
+		for _, h in ipairs(hidden) do
+			if h[1] and h[2] then pcall(function() h[1].Parent = h[2] end) end
+		end
+		hidden = {}
+		if orig then
+			Lighting.Ambient = orig.Ambient
+			Lighting.OutdoorAmbient = orig.OutdoorAmbient
+			Lighting.ColorShift_Top = orig.Top
+			Lighting.ColorShift_Bottom = orig.Bot
+			Lighting.FogColor = orig.FogColor
+			Lighting.FogStart = orig.FogStart
+			Lighting.FogEnd = orig.FogEnd
+			Lighting.Brightness = orig.Brightness
+			Lighting.ExposureCompensation = orig.Exposure
+			Lighting.ClockTime = orig.ClockTime
+		end
+		enforcedAmbient = nil
+		enforcedClockTime = nil
+	end
+
+	local function setPreset(name)
+		if name == "Default" or not PRESETS[name] then
+			reset()
+			return
+		end
+		save()
+		if #hidden == 0 then hideForeign() end
+		local p = PRESETS[name]
+		SKY.Cur = p
+		SKY.Name = name
+		applyLight(p)
+		fxBuild(p)
+	end
+
+	-- oyun ayarlari ezmesin diye ayarlari yarim saniyede bir tekrar uygula; parcaciklar kamerayi takip eder
+	table.insert(conns, RunService.Heartbeat:Connect(function(dt)
+		if not SKY.Cur then return end
+		acc = acc + dt
+		if acc >= 0.5 then
+			acc = 0
+			pcall(applyLight, SKY.Cur)
+		end
+		if fxPart then
+			local cam = workspace.CurrentCamera
+			if cam then
+				if fxPart.Parent ~= cam then fxPart.Parent = cam end
+				local up = fxPart:GetAttribute("up")
+				fxPart.CFrame = CFrame.new(cam.CFrame.Position + Vector3.new(0, up and -8 or 40, 0))
+			end
+		end
+	end))
+
+	return {
+		Order = ORDER,
+		Set = function(n) pcall(setPreset, n) end,
+		Reset = function() pcall(reset) end,
+		SetClock = function(v)
+			SKY.over.time = v
+			Lighting.ClockTime = v
+			enforcedClockTime = v
+			if SKY.Cur then pcall(applyLight, SKY.Cur) end
+		end,
+		SetTime = function(on)
+			SKY.useTime = on
+			if SKY.Cur then pcall(applyLight, SKY.Cur) end
+		end,
+		SetParticles = function(on)
+			SKY.Particles = on
+			if SKY.Cur then pcall(fxBuild, SKY.Cur) end
+		end,
+		SetDensity = function(v)
+			SKY.Density = v
+			if fxEm and SKY.Cur and SKY.Cur.fx then fxEm.Rate = SKY.Cur.fx.rate * v end
+		end,
+		Over = function(k, v)
+			SKY.over[k] = v
+			if SKY.Cur then pcall(applyLight, SKY.Cur) end
+		end,
+	}
+end)()
+
+------------------------------------------------------------------ SAF ESP MODULU ENTEGRASYONU
 local ESP = {
 	Player = false,
 	NPC = false,
@@ -1275,15 +1616,25 @@ local GREEN, RED = Color3.fromRGB(73, 238, 148), Color3.fromRGB(255, 85, 115)
 local R15 = {{'Head', 'UpperTorso'}, {'UpperTorso', 'LowerTorso'}, {'UpperTorso', 'LeftUpperArm'}, {'LeftUpperArm', 'LeftLowerArm'}, {'LeftLowerArm', 'LeftHand'}, {'UpperTorso', 'RightUpperArm'}, {'RightUpperArm', 'RightLowerArm'}, {'RightLowerArm', 'RightHand'}, {'LowerTorso', 'LeftUpperLeg'}, {'LeftUpperLeg', 'LeftLowerLeg'}, {'LeftLowerLeg', 'LeftFoot'}, {'LowerTorso', 'RightUpperLeg'}, {'RightUpperLeg', 'RightLowerLeg'}, {'RightLowerLeg', 'RightFoot'}}
 local R6 = {{'Head', 'Torso'}, {'Torso', 'Left Arm'}, {'Torso', 'Right Arm'}, {'Torso', 'Left Leg'}, {'Torso', 'Right Leg'}}
 
-local world = Instance.new('Folder', workspace)
-world.Name = 'KPUD_ESP_WORLD'
+pcall(function() RunService:UnbindFromRenderStep('KPUD_PURE_ESP_RENDER') end)
+pcall(function() RunService:UnbindFromRenderStep('AimbotUI_Step') end)
+pcall(function() RunService:UnbindFromRenderStep('HitboxUI_Step') end)
+local oldWorld = workspace:FindFirstChild('KPUD_ESP_WORLD')
+if oldWorld then oldWorld:Destroy() end
+local oldOverlay = host:FindFirstChild('KPUD_ESP_GUI')
+if oldOverlay then oldOverlay:Destroy() end
 
-local overlay = Instance.new('ScreenGui', gui)
+local world = Instance.new('Folder')
+world.Name = 'KPUD_ESP_WORLD'
+world.Parent = workspace
+
+local overlay = Instance.new('ScreenGui')
 overlay.Name = 'KPUD_ESP_GUI'
 overlay.ResetOnSpawn = false
 overlay.IgnoreGuiInset = true
-overlay.DisplayOrder = 245
+overlay.DisplayOrder = 50
 overlay.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+overlay.Parent = host
 
 local targets, npcs, pcache = {}, {}, {}
 local slowTimer, VW, VH = 0, 800, 600
@@ -1383,7 +1734,7 @@ local function buildSkel(p)
 end
 
 local function buildArrow(p)
-	local t = makeLabel(p, 7); t.Text = '▲'; t.TextSize = 22; t.AnchorPoint = Vector2.new(.5, .5); t.Size = UDim2.fromOffset(26, 26)
+	local t = makeLabel(p, 7); t.Text = '^'; t.TextSize = 22; t.AnchorPoint = Vector2.new(.5, .5); t.Size = UDim2.fromOffset(26, 26)
 	return {list = {t}, label = t}
 end
 
@@ -1441,7 +1792,7 @@ local function toolInfo(model, player)
 	local parts = {}
 	for i = 1, math.min(4, #order) do local n = order[i]; parts[#parts + 1] = count[n] > 1 and (n .. ' x' .. count[n]) or n end
 	if #order > 4 then parts[#parts + 1] = '+' .. (#order - 4) end
-	return held, #parts > 0 and table.concat(parts, ', ') or 'Boş'
+	return held, #parts > 0 and table.concat(parts, ', ') or 'Bos'
 end
 
 local function canSee(d, cam)
@@ -1494,6 +1845,11 @@ local function addNPC(h)
 	local m = h and h.Parent
 	if m and m:IsA('Model') and m ~= lp.Character and not Players:GetPlayerFromCharacter(m) then npcs[m] = true end
 end
+local function scanNPCs()
+	for _, o in ipairs(workspace:GetDescendants()) do
+		if o:IsA('Humanoid') then addNPC(o) end
+	end
+end
 workspace.DescendantAdded:Connect(function(o) if ESP.NPC and o:IsA('Humanoid') then task.defer(addNPC, o) end end)
 
 local function slowESP()
@@ -1539,7 +1895,7 @@ local function slowESP()
 				local held, inv = toolInfo(model, player)
 				local lines = {}
 				if ESP.HeldItem then lines[#lines + 1] = 'ELDE: ' .. held end
-				if ESP.Inventory then lines[#lines + 1] = 'ÇANTA: ' .. inv end
+				if ESP.Inventory then lines[#lines + 1] = 'CANTA: ' .. inv end
 				d.itemText = table.concat(lines, '\n'); d.itemLines = #lines
 			end
 		else
@@ -1870,7 +2226,7 @@ RunService:BindToRenderStep("AimbotUI_Step", Enum.RenderPriority.Camera.Value + 
 							score = hum.Health
 						end
 						if not bestScore or score < bestScore then
-							bestScore, point, _, aimTarget = score, p, d, plr
+							bestScore, point, aimTarget = score, p, plr
 						end
 					end
 				end
@@ -2035,7 +2391,7 @@ if AIM_MOBILE then
 	end))
 end
 
------------------------------------------------------------------- HİTBOX ENTEGRASYONU
+------------------------------------------------------------------ HITBOX ENTEGRASYONU
 local Hit = {
 	Enabled = false,
 	Groups = { Head = false, Torso = false, Root = false, Arms = false, Legs = false },
@@ -2060,21 +2416,6 @@ local PART_GROUPS = {
 }
 local GROUP_ORDER = { "Head", "Torso", "Root", "Arms", "Legs" }
 local records = {}
-local protected = {}
-local ourWrite = false
-
-pcall(function()
-	local mt = getrawmetatable(game)
-	local oldNewIndex = mt.__newindex
-	setreadonly(mt, false)
-	mt.__newindex = function(t, k, v)
-		if protected[t] and not ourWrite then
-			if k == "CFrame" or k == "Anchored" or k == "Size" or k == "Position" then return end
-		end
-		return oldNewIndex(t, k, v)
-	end
-	setreadonly(mt, true)
-end)
 
 local function getScale()
 	if Hit.Uniform then return Hit.Scale, Hit.Scale, Hit.Scale end
@@ -2083,19 +2424,16 @@ end
 
 local function restorePart(part, o)
 	if not part or not part.Parent then return end
-	ourWrite = true
 	pcall(function()
 		part.Size = o.Size
 		part.Transparency = o.Transparency
 		part.Color = o.Color
 		part.Material = o.Material
 		part.CanCollide = o.CanCollide
-		if o.CPP ~= nil then part.CustomPhysicalProperties = o.CPP end
-		part.Anchored = false
+		if o.Massless ~= nil then part.Massless = o.Massless end
 		if o.CanQuery ~= nil then part.CanQuery = o.CanQuery end
+		if o.Motor and o.Motor.Parent then o.Motor.C1 = o.C1 end
 	end)
-	protected[part] = nil
-	ourWrite = false
 end
 
 local function restoreAll(rec)
@@ -2106,20 +2444,25 @@ end
 local function applyPart(rec, part, sx, sy, sz)
 	local o = rec.parts[part]
 	if not o then
-		o = { Size = part.Size, CFrame = part.CFrame, Transparency = part.Transparency, Color = part.Color, Material = part.Material, CanCollide = part.CanCollide, CPP = part.CustomPhysicalProperties, CanQuery = part.CanQuery }
+		o = { Size = part.Size, Transparency = part.Transparency, Color = part.Color, Material = part.Material, CanCollide = part.CanCollide, Massless = part.Massless, CanQuery = part.CanQuery }
+		-- eklem (Motor6D) sabit kaldigi icin buyuyen kafa govdeye gomuluyordu: eklemi buyume kadar kaydir
+		for _, m in ipairs(rec.char:GetDescendants()) do
+			if m:IsA("Motor6D") and m.Part1 == part then
+				o.Motor, o.C1 = m, m.C1
+				break
+			end
+		end
 		rec.parts[part] = o
 	end
-	protected[part] = o
-	ourWrite = true
-	o.CFrame = part.CFrame
 	local want = Vector3.new(o.Size.X * sx, o.Size.Y * sy, o.Size.Z * sz)
 	if (part.Size - want).Magnitude > 0.01 then part.Size = want end
-	part.CustomPhysicalProperties = PhysicalProperties.new(0.001, 0.3, 0.5, 1, 1)
+	if o.Motor and o.Motor.Parent and part.Name == "Head" then
+		local c1 = o.C1 * CFrame.new(0, -(want.Y - o.Size.Y) / 2, 0)
+		if o.Motor.C1 ~= c1 then o.Motor.C1 = c1 end
+	end
 	pcall(function() part.Massless = true end)
-	if part.Anchored then part.Anchored = false end
 	part.CanQuery = true
 	part.CanTouch = true
-	if part.CFrame ~= o.CFrame then part.CFrame = o.CFrame end
 
 	local tr, col, mat = o.Transparency, o.Color, o.Material
 	if Hit.ShowBox then
@@ -2133,12 +2476,11 @@ local function applyPart(rec, part, sx, sy, sz)
 	local cc = o.CanCollide
 	if Hit.NoCollide then cc = false end
 	if part.CanCollide ~= cc then part.CanCollide = cc end
-	ourWrite = false
 end
 
 local hitAcc = 0
 RunService.Heartbeat:Connect(function(dt)
-	hitAcc += dt
+	hitAcc = hitAcc + dt
 	if hitAcc < 0.1 then return end
 	hitAcc = 0
 	local cam = workspace.CurrentCamera
@@ -2200,7 +2542,6 @@ pcall(function() RunService:UnbindFromRenderStep("HitboxUI_Step") end)
 RunService:BindToRenderStep("HitboxUI_Step", Enum.RenderPriority.Last.Value, function()
 	if not Hit.Enabled then return end
 	local sx, sy, sz = getScale()
-	ourWrite = true
 	for _, rec in pairs(records) do
 		for part, o in pairs(rec.parts) do
 			pcall(function()
@@ -2211,10 +2552,24 @@ RunService:BindToRenderStep("HitboxUI_Step", Enum.RenderPriority.Last.Value, fun
 			end)
 		end
 	end
-	ourWrite = false
 end)
 
------------------------------------------------------------------- SEKMELER VE MENÜ KURULUMU
+------------------------------------------------------------------ SEKMELER VE MENU KURULUMU
+gui.Destroying:Connect(function()
+	Aim.Enabled = false
+	Hit.Enabled = false
+	ESP.Player = false
+	ESP.NPC = false
+	pcall(function() RunService:UnbindFromRenderStep('KPUD_PURE_ESP_RENDER') end)
+	pcall(function() RunService:UnbindFromRenderStep('AimbotUI_Step') end)
+	pcall(function() RunService:UnbindFromRenderStep('HitboxUI_Step') end)
+	pcall(clearAllESP)
+	pcall(SkyAPI.Reset)
+	pcall(function() world:Destroy() end)
+	pcall(function() overlay:Destroy() end)
+	for plr, rec in pairs(records) do pcall(restoreAll, rec) end
+end)
+
 local Window = Aurora:CreateWindow("Aurora X", "v2.0 - Ultimate Edition")
 
 -- 1. HOME SEKME
@@ -2222,9 +2577,9 @@ local Home = Window:AddTab("Home", "o")
 Home:AddDashboard()
 local hDiscord = Home:AddSection("DISCORD")
 hDiscord:AddCopyCard("Discord Server", "discord.gg/tHUHTVzxxV", "https://discord.gg/tHUHTVzxxV")
-local hCredits = Home:AddSection("EMEĞİ GEÇENLER")
-hCredits:AddCredit("kpudfr")
-hCredits:AddCredit("3qr311")
+local hCredits = Home:AddSection("EMEGI GECENLER")
+hCredits:AddCredit("kpudfr", "UI Designer")
+hCredits:AddCredit("3qr311", "Scripter")
 
 -- 2. PLAYER SEKME
 local Player = Window:AddTab("Player", "o")
@@ -2251,16 +2606,66 @@ p1:AddToggle("Sit", false, function(on)
 end)
 
 local p2 = Player:AddSection("Actions")
-p2:AddKeybind("Reset keybind", Enum.KeyCode.R, function()
-	local char = lp.Character
-	local h = char and char:FindFirstChildOfClass("Humanoid")
-	if h then h.Health = 0 end
-end)
+do
+	-- AddKeybind sadece tus ATANDIGINDA calisir; atanan tusa sonradan basinca karakteri sifirlamak icin ayri dinleyici
+	local resetBind = { kind = "key", value = Enum.KeyCode.R }
+	local skipUntil = 0
+	p2:AddKeybind("Reset keybind", Enum.KeyCode.R, function(b)
+		if type(b) == "table" then
+			resetBind = b
+			skipUntil = os.clock() + 0.5 -- tusu atarken basilan tus karakteri oldurmesin
+		end
+	end)
+	table.insert(conns, UIS.InputBegan:Connect(function(i, gp)
+		if gp then return end
+		local hit = (resetBind.kind == "key" and i.KeyCode == resetBind.value) or (resetBind.kind == "mouse" and i.UserInputType == resetBind.value)
+		if not hit then return end
+		-- bir kare bekle: tus atama olayi ayni anda isleniyorsa once o bitsin
+		task.defer(function()
+			if os.clock() < skipUntil then return end
+			local char = lp.Character
+			local h = char and char:FindFirstChildOfClass("Humanoid")
+			if h then h.Health = 0 end
+		end)
+	end))
+end
 p2:AddButton("Reset Character", function()
 	local char = lp.Character
 	local h = char and char:FindFirstChildOfClass("Humanoid")
 	if h then h.Health = 0 end
 end)
+
+local p3 = Player:AddSection("Utility")
+do
+	local VirtualUser = game:GetService("VirtualUser")
+	local afkConn = nil
+	local afkOn = false
+	local function poke()
+		pcall(function()
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new(0, 0))
+		end)
+	end
+	local function afkStop()
+		afkOn = false
+		if afkConn then afkConn:Disconnect() afkConn = nil end
+	end
+	gui.Destroying:Connect(afkStop)
+	p3:AddToggle("Anti AFK", false, function(on)
+		afkStop()
+		if not on then return end
+		afkOn = true
+		afkConn = lp.Idled:Connect(poke)
+		Aurora:Notify("Anti AFK", "Aktif: AFK atilmayacaksin", 2.5, "success")
+		task.spawn(function()
+			-- Idled tetiklenmese bile 2 dakikada bir hareket gonder
+			while afkOn do
+				task.wait(120)
+				if afkOn then poke() end
+			end
+		end)
+	end)
+end
 
 -- 3. VISUALS SEKME
 local Visuals = Window:AddTab("Visuals", "o")
@@ -2273,11 +2678,344 @@ v1:AddDropdown("Time of day", { "Morning", "Noon", "Evening", "Night" }, "Noon",
 end)
 v1:AddToggle("Bright mode", false, function(on) Lighting.Brightness = on and 3 or 1 end)
 
+
+local v3 = Visuals:AddSection("Custom Sky")
+v3:AddDropdown("Sky Preset", SkyAPI.Order, "Default", function(o)
+	SkyAPI.Set(o)
+	Aurora:Notify("Custom Sky", "Gokyuzu: " .. tostring(o), 2.5)
+end)
+v3:AddToggle("Particles (petal / snow / ember)", true, function(on) SkyAPI.SetParticles(on) end)
+v3:AddSlider("Particle Density", 0.2, 3, 1, function(v) SkyAPI.SetDensity(v) end, 0.1)
+v3:AddSlider("Star Count", 0, 5000, 3000, function(v) SkyAPI.Over("stars", math.floor(v)) end, 100)
+v3:AddSlider("Atmosphere Density", 0, 1, 0.3, function(v) SkyAPI.Over("dens", v) end, 0.05)
+v3:AddColorPicker("Atmosphere Color", Color3.fromRGB(200, 200, 255), function(c) SkyAPI.Over("acol", c) end)
+v3:AddColorPicker("Horizon Color", Color3.fromRGB(255, 150, 120), function(c) SkyAPI.Over("dec", c) end)
+v3:AddToggle("Apply Preset Time (gece/gunduz)", true, function(on) SkyAPI.SetTime(on) end)
+v3:AddSlider("Sky Time (saat)", 0, 24, 12, function(v) SkyAPI.SetClock(v) end, 0.5)
+v3:AddButton("Reset Sky", function()
+	SkyAPI.Reset()
+	Aurora:Notify("Custom Sky", "Gokyuzu sifirlandi", 2.5)
+end)
+
 local v2 = Visuals:AddSection("Colors")
 v2:AddColorPicker("Ambient color", Color3.fromRGB(140, 140, 160), function(c)
 	enforcedAmbient = c
 	Lighting.Ambient = c
 end)
+
+-- 3b. TELEPORT SEKME
+do
+	local HttpService = game:GetService("HttpService")
+	local TP = { Mode = "Instant", Time = 1.2, Lift = 3, Selected = nil, Back = nil, Filter = "", Click = false, SaveName = "", Coords = "" }
+	local SAVE_FILE = "AuroraX_Teleports.json"
+	local placeKey = tostring(game.PlaceId)
+	local saved = {}
+	pcall(function()
+		if isfile and isfile(SAVE_FILE) then
+			local all = HttpService:JSONDecode(readfile(SAVE_FILE))
+			if type(all) == "table" and type(all[placeKey]) == "table" then saved = all[placeKey] end
+		end
+	end)
+	local function persist()
+		pcall(function()
+			if not writefile then return end
+			local all = {}
+			if isfile and isfile(SAVE_FILE) then
+				local ok, d = pcall(function() return HttpService:JSONDecode(readfile(SAVE_FILE)) end)
+				if ok and type(d) == "table" then all = d end
+			end
+			all[placeKey] = saved
+			writefile(SAVE_FILE, HttpService:JSONEncode(all))
+		end)
+	end
+
+	local function rootOf(plr)
+		local c = plr and plr.Character
+		return c and c:FindFirstChild("HumanoidRootPart")
+	end
+	local function say(msg, kind) Aurora:Notify("Teleport", msg, 2.5, kind or "success") end
+
+	local tweenObj = nil
+	local function goCF(cf, noLift)
+		local r = rootOf(lp)
+		if not r then say("Karakter bulunamadi", "error") return false end
+		TP.Back = r.CFrame
+		if tweenObj then tweenObj:Cancel() tweenObj = nil end
+		local target = noLift and cf or (cf + Vector3.new(0, TP.Lift, 0))
+		if TP.Mode == "Smooth" then
+			tweenObj = TweenService:Create(r, TweenInfo.new(TP.Time, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), { CFrame = target })
+			tweenObj:Play()
+		else
+			pcall(function() r.AssemblyLinearVelocity = Vector3.new(0, 0, 0) end)
+			r.CFrame = target
+		end
+		return true
+	end
+	local function goPlayer(p)
+		local r = rootOf(p)
+		if not p or not r then say("Oyuncu bulunamadi veya karakteri yok", "error") return end
+		if goCF(r.CFrame * CFrame.new(0, 0, 3)) then say(p.DisplayName .. " yanina isinlandin") end
+	end
+
+	local spectating = false
+	local function stopSpec()
+		spectating = false
+		local cam = workspace.CurrentCamera
+		local h = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+		if cam and h then cam.CameraSubject = h end
+	end
+	gui.Destroying:Connect(function() pcall(stopSpec) end)
+
+	local Tele = Window:AddTab("Teleport", "o")
+
+	------------------------------------------------ OYUNCULAR
+	local tp1 = Tele:AddSection("Players")
+	local refreshList
+	tp1:AddTextbox("Search player", "name...", function(txt)
+		TP.Filter = string.lower(txt or "")
+		refreshList()
+	end)
+	local listBox = tp1:AddContainer()
+	local entries = {}
+	local accentObjs = {} -- accent rengini (rainbow dahil) takip edecek butonlar
+	onAccent(function(a)
+		for i = #accentObjs, 1, -1 do
+			local o = accentObjs[i]
+			if o.Parent then o.BackgroundColor3 = a else table.remove(accentObjs, i) end
+		end
+		for _, e in ipairs(entries) do
+			if e.plr and e.plr == TP.Selected and e.st.Parent then e.st.Color = a end
+		end
+	end)
+	local function paintSel()
+		for _, e in ipairs(entries) do
+			local on = TP.Selected == e.plr
+			e.st.Color = on and accent or T.line
+			e.st.Transparency = on and 0 or 0.5
+		end
+	end
+	refreshList = function()
+		for _, e in ipairs(entries) do e.frame:Destroy() end
+		entries = {}
+		local plist = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= lp then
+				local nm = string.lower(p.Name)
+				local dn = string.lower(p.DisplayName)
+				if TP.Filter == "" or string.find(nm, TP.Filter, 1, true) or string.find(dn, TP.Filter, 1, true) then table.insert(plist, p) end
+			end
+		end
+		table.sort(plist, function(a, b) return string.lower(a.DisplayName) < string.lower(b.DisplayName) end)
+		for n, p in ipairs(plist) do
+			local f = new("TextButton", { Text = "", Size = UDim2.new(1, 0, 0, 48), BackgroundColor3 = T.row2, BackgroundTransparency = 0.3, AutoButtonColor = false, BorderSizePixel = 0, LayoutOrder = n }, { corner(10) })
+			local st = stroke(T.line, 1, 0.5)
+			st.Parent = f
+			new("ImageLabel", { Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(8, 7), BackgroundColor3 = T.bg1, BorderSizePixel = 0, Image = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(p.UserId) .. "&w=60&h=60" }, { corner(17) }).Parent = f
+			local nameL = label({ Text = p.DisplayName, Font = Enum.Font.GothamBold, TextSize = 13, Size = UDim2.new(1, -170, 0, 18), Position = UDim2.fromOffset(52, 7) })
+			nameL.TextTruncate = Enum.TextTruncate.AtEnd
+			nameL.Parent = f
+			local subL = label({ Text = "@" .. p.Name, TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(1, -170, 0, 14), Position = UDim2.fromOffset(52, 26) })
+			subL.TextTruncate = Enum.TextTruncate.AtEnd
+			subL.Parent = f
+			local dist = label({ Text = "--", TextSize = 11, TextColor3 = T.sub, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.fromOffset(56, 18), Position = UDim2.new(1, -122, 0, 15) })
+			dist.Parent = f
+			local go = new("TextButton", { Text = "TP", Size = UDim2.fromOffset(46, 28), Position = UDim2.new(1, -54, 0.5, -14), BackgroundColor3 = accent, Font = Enum.Font.GothamBlack, TextSize = 12, TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, BorderSizePixel = 0 }, { corner(8) })
+			go.Parent = f
+			table.insert(accentObjs, go)
+			f.MouseButton1Click:Connect(function()
+				TP.Selected = p
+				paintSel()
+			end)
+			go.MouseButton1Click:Connect(function()
+				TP.Selected = p
+				paintSel()
+				goPlayer(p)
+			end)
+			f.Parent = listBox
+			table.insert(entries, { plr = p, frame = f, st = st, dist = dist })
+		end
+		if #plist == 0 then
+			local e = label({ Text = "Oyuncu bulunamadi", TextSize = 12, TextColor3 = T.dim, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 30) })
+			e.Parent = listBox
+			table.insert(entries, { plr = nil, frame = e, st = { Color = T.line, Transparency = 0 }, dist = nil })
+		end
+		paintSel()
+	end
+	refreshList()
+	table.insert(conns, Players.PlayerAdded:Connect(function() task.defer(refreshList) end))
+	table.insert(conns, Players.PlayerRemoving:Connect(function(p)
+		if TP.Selected == p then TP.Selected = nil end
+		task.defer(refreshList)
+	end))
+	local distAcc = 0
+	table.insert(conns, RunService.Heartbeat:Connect(function(dt)
+		distAcc = distAcc + dt
+		if distAcc < 0.5 then return end
+		distAcc = 0
+		local mine = rootOf(lp)
+		for _, e in ipairs(entries) do
+			if e.plr and e.dist then
+				local r = rootOf(e.plr)
+				e.dist.Text = (mine and r) and (tostring(math.floor((r.Position - mine.Position).Magnitude)) .. "m") or "--"
+			end
+		end
+	end))
+
+	tp1:AddButton("Teleport to Selected", function()
+		if not TP.Selected then say("Once listeden bir oyuncuya dokun", "warn") return end
+		goPlayer(TP.Selected)
+	end)
+	tp1:AddButton("Teleport to Nearest Player", function()
+		local mine = rootOf(lp)
+		if not mine then say("Karakter bulunamadi", "error") return end
+		local best, bd = nil, math.huge
+		for _, p in ipairs(Players:GetPlayers()) do
+			local r = rootOf(p)
+			if p ~= lp and r then
+				local d = (r.Position - mine.Position).Magnitude
+				if d < bd then best, bd = p, d end
+			end
+		end
+		if best then goPlayer(best) else say("Yakinda oyuncu yok", "warn") end
+	end)
+	tp1:AddButton("Teleport to Random Player", function()
+		local pool = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= lp and rootOf(p) then table.insert(pool, p) end
+		end
+		if #pool == 0 then say("Oyuncu yok", "warn") return end
+		goPlayer(pool[math.random(1, #pool)])
+	end)
+	tp1:AddToggle("Spectate Selected", false, function(on)
+		if on then
+			local h = TP.Selected and TP.Selected.Character and TP.Selected.Character:FindFirstChildOfClass("Humanoid")
+			if h and workspace.CurrentCamera then
+				workspace.CurrentCamera.CameraSubject = h
+				spectating = true
+			else
+				say("Once listeden bir oyuncu sec", "warn")
+			end
+		else
+			stopSpec()
+		end
+	end)
+	tp1:AddButton("Refresh List", function() refreshList() end)
+
+	------------------------------------------------ KAYITLI KONUMLAR
+	local tp2 = Tele:AddSection("Saved Locations")
+	local refreshSaved
+	tp2:AddTextbox("Location name", "e.g. Base", function(txt) TP.SaveName = txt or "" end)
+	tp2:AddButton("Save Current Position", function()
+		local r = rootOf(lp)
+		if not r then say("Karakter bulunamadi", "error") return end
+		local nm = TP.SaveName ~= "" and TP.SaveName or ("Spot " .. tostring(#saved + 1))
+		local p = r.Position
+		table.insert(saved, { name = nm, x = math.floor(p.X * 10) / 10, y = math.floor(p.Y * 10) / 10, z = math.floor(p.Z * 10) / 10 })
+		persist()
+		refreshSaved()
+		say("Kaydedildi: " .. nm)
+	end)
+	local savedBox = tp2:AddContainer()
+	local savedEntries = {}
+	refreshSaved = function()
+		for _, f in ipairs(savedEntries) do f:Destroy() end
+		savedEntries = {}
+		if #saved == 0 then
+			local e = label({ Text = "Kayitli konum yok", TextSize = 12, TextColor3 = T.dim, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.new(1, 0, 0, 30) })
+			e.Parent = savedBox
+			table.insert(savedEntries, e)
+			return
+		end
+		for n, s in ipairs(saved) do
+			local f = new("Frame", { Size = UDim2.new(1, 0, 0, 46), BackgroundColor3 = T.row2, BackgroundTransparency = 0.3, BorderSizePixel = 0, LayoutOrder = n }, { corner(10), stroke(T.line, 1, 0.5) })
+			local nl = label({ Text = tostring(s.name), Font = Enum.Font.GothamBold, TextSize = 13, Size = UDim2.new(1, -130, 0, 18), Position = UDim2.fromOffset(14, 6) })
+			nl.TextTruncate = Enum.TextTruncate.AtEnd
+			nl.Parent = f
+			label({ Text = tostring(s.x) .. ", " .. tostring(s.y) .. ", " .. tostring(s.z), TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(1, -130, 0, 14), Position = UDim2.fromOffset(14, 25) }).Parent = f
+			local go = new("TextButton", { Text = "GO", Size = UDim2.fromOffset(44, 28), Position = UDim2.new(1, -96, 0.5, -14), BackgroundColor3 = accent, Font = Enum.Font.GothamBlack, TextSize = 12, TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, BorderSizePixel = 0 }, { corner(8) })
+			go.Parent = f
+			table.insert(accentObjs, go)
+			local del = new("TextButton", { Text = "X", Size = UDim2.fromOffset(34, 28), Position = UDim2.new(1, -46, 0.5, -14), BackgroundColor3 = T.err, BackgroundTransparency = 0.25, Font = Enum.Font.GothamBlack, TextSize = 12, TextColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, BorderSizePixel = 0 }, { corner(8) })
+			del.Parent = f
+			go.MouseButton1Click:Connect(function()
+				if goCF(CFrame.new(s.x, s.y, s.z)) then say(tostring(s.name) .. " konumuna isinlandin") end
+			end)
+			del.MouseButton1Click:Connect(function()
+				for i, v in ipairs(saved) do
+					if v == s then table.remove(saved, i) break end
+				end
+				persist()
+				refreshSaved()
+			end)
+			f.Parent = savedBox
+			table.insert(savedEntries, f)
+		end
+	end
+	refreshSaved()
+
+	------------------------------------------------ HIZLI
+	local tp3 = Tele:AddSection("Quick Teleport")
+	tp3:AddTextbox("Coordinates (x y z)", "0 50 0", function(txt) TP.Coords = txt or "" end)
+	tp3:AddButton("Teleport to Coordinates", function()
+		local nums = {}
+		for n in string.gmatch(TP.Coords, "-?%d+%.?%d*") do table.insert(nums, tonumber(n)) end
+		if #nums < 3 then say("3 sayi gir: x y z", "warn") return end
+		if goCF(CFrame.new(nums[1], nums[2], nums[3])) then say("Koordinata isinlandin") end
+	end)
+	tp3:AddButton("Copy My Coordinates", function()
+		local r = rootOf(lp)
+		local clip = setclipboard or toclipboard
+		if not r then say("Karakter bulunamadi", "error") return end
+		local p = r.Position
+		local txt = string.format("%.1f %.1f %.1f", p.X, p.Y, p.Z)
+		if clip then
+			pcall(clip, txt)
+			say("Kopyalandi: " .. txt)
+		else
+			say("Konum: " .. txt, "warn")
+		end
+	end)
+	tp3:AddButton("Go Back (onceki konum)", function()
+		if not TP.Back then say("Onceki konum yok", "warn") return end
+		goCF(TP.Back, true)
+		say("Geri donuldu")
+	end)
+	tp3:AddButton("Teleport to Spawn", function()
+		local sp = workspace:FindFirstChildWhichIsA("SpawnLocation", true)
+		if not sp then say("Spawn noktasi bulunamadi", "warn") return end
+		if goCF(sp.CFrame + Vector3.new(0, sp.Size.Y / 2, 0)) then say("Spawn noktasina isinlandin") end
+	end)
+
+	------------------------------------------------ AYARLAR
+	local tp4 = Tele:AddSection("Teleport Settings")
+	tp4:AddDropdown("Mode", { "Instant", "Smooth" }, "Instant", function(o) TP.Mode = o end)
+	tp4:AddSlider("Smooth Duration (s)", 0.2, 6, 1.2, function(v) TP.Time = v end, 0.1)
+	tp4:AddSlider("Height Offset (studs)", 0, 20, 3, function(v) TP.Lift = v end, 0.5)
+	tp4:AddToggle("Click / Tap Teleport", false, function(on) TP.Click = on end)
+	tp4:AddLabel("PC: Ctrl basili tut + tikla. Mobil: ekrana dokun.")
+	local function rayHit(ray)
+		local ignore = {}
+		if lp.Character then table.insert(ignore, lp.Character) end
+		if workspace.CurrentCamera then table.insert(ignore, workspace.CurrentCamera) end
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = ignore
+		return workspace:Raycast(ray.Origin, ray.Direction * 3000, params)
+	end
+	table.insert(conns, UIS.InputBegan:Connect(function(i, gp)
+		if gp or not TP.Click then return end
+		if i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+			local m = UIS:GetMouseLocation()
+			local hit = rayHit(workspace.CurrentCamera:ViewportPointToRay(m.X, m.Y))
+			if hit then goCF(CFrame.new(hit.Position)) end
+		end
+	end))
+	table.insert(conns, UIS.TouchTap:Connect(function(pos, gp)
+		if gp or not TP.Click or #pos == 0 then return end
+		local hit = rayHit(workspace.CurrentCamera:ScreenPointToRay(pos[1].X, pos[1].Y))
+		if hit then goCF(CFrame.new(hit.Position)) end
+	end))
+end
 
 -- 4. ESP SEKME
 local ESPTab = Window:AddTab("ESP", "o")
@@ -2308,9 +3046,7 @@ e3:AddToggle("Skeleton", false, function(on) ESP.Skeleton = on end)
 local e4 = ESPTab:AddSection("NPC ESP")
 e4:AddToggle("NPC Enabled", false, function(on)
 	ESP.NPC = on
-	if on then scanNPCs = scanNPCs or function()
-		for _, o in ipairs(workspace:GetDescendants()) do if o:IsA('Humanoid') then addNPC(o) end end
-	end scanNPCs() end
+	if on then scanNPCs() end
 end)
 
 local e5 = ESPTab:AddSection("Colors")
@@ -2374,7 +3110,7 @@ a2:AddToggle("No Collide", false, function(on) Hit.NoCollide = on end)
 -- 6. SETTINGS SEKME
 local Settings = Window:AddTab("Settings", "o")
 local s1 = Settings:AddSection("Appearance & Scale")
-s1:AddDropdown("Theme", { "Violet", "Ocean", "Mint", "Rose", "Amber" }, "Violet", function(o) Aurora:SetAccent(o, true) end)
+s1:AddDropdown("Theme", { "Violet", "Ocean", "Mint", "Rose", "Amber", "Crimson", "Red", "Orange", "Gold", "Lime", "Emerald", "Teal", "Cyan", "Sky", "Blue", "Indigo", "Purple", "Magenta", "Pink", "Silver", "White" }, "Violet", function(o) Aurora:SetAccent(o, true) end)
 s1:AddColorPicker("Custom accent", ACCENTS.Violet, function(c) Aurora:SetAccent(c, true) end)
 s1:AddToggle("Rainbow Accent", false, function(on)
 	isRainbowAccent = on
@@ -2382,13 +3118,48 @@ s1:AddToggle("Rainbow Accent", false, function(on)
 		Aurora:SetAccent(savedAccent, false)
 	end
 end)
-s1:AddSlider("Menu Scale (Boyut)", 0.4, 1.5, initialScale, function(v)
+s1:AddSlider("Menu Scale (Boyut)", 0.4, 1.5, ((UIS.TouchEnabled and not UIS.MouseEnabled) and 0.65 or 0.85), function(v)
 	Aurora:SetMenuScale(v)
 end, 0.05)
 s1:AddButton("Reset Theme Colors", function()
 	Aurora:ResetTheme()
-	Aurora:Notify("Sıfırlandı", "Tüm tema renkleri ve arka planlar varsayılan ayarlara döndürüldü.", 3, "success")
+	Aurora:Notify("Sifirlandi", "Tum tema renkleri ve arka planlar varsayilan ayarlara donduruldu.", 3, "success")
 end)
+
+local sPack = Settings:AddSection("Theme Packs & Backgrounds")
+do
+	local function hsvBG(h, sat)
+		local function hv(v, k) return Color3.fromHSV(h, math.clamp(sat * (k or 1), 0, 1), v) end
+		return { bg0 = hv(0.17), bg1 = hv(0.07), side = hv(0.09), card = hv(0.17), row = hv(0.22), row2 = hv(0.28), line = hv(0.34, 0.8),
+			text = Color3.fromRGB(238, 241, 249), sub = hv(0.76, 0.15), dim = hv(0.55, 0.2), scroll = hv(0.34, 0.8) }
+	end
+	local BGS = {
+		Black = hsvBG(0, 0), Midnight = hsvBG(0.62, 0.55), Crimson = hsvBG(0.99, 0.7), Forest = hsvBG(0.38, 0.6),
+		Ocean = hsvBG(0.55, 0.65), Purple = hsvBG(0.76, 0.6), Rose = hsvBG(0.93, 0.55), Slate = hsvBG(0.6, 0.15), Coffee = hsvBG(0.07, 0.5),
+		Teal = hsvBG(0.48, 0.6), Sunset = hsvBG(0.04, 0.65), Olive = hsvBG(0.2, 0.5),
+		Light = { bg0 = Color3.fromRGB(240, 243, 250), bg1 = Color3.fromRGB(222, 228, 240), side = Color3.fromRGB(230, 234, 245), card = Color3.fromRGB(250, 251, 255),
+			row = Color3.fromRGB(236, 240, 250), row2 = Color3.fromRGB(224, 229, 243), line = Color3.fromRGB(200, 208, 228), text = Color3.fromRGB(28, 32, 48),
+			sub = Color3.fromRGB(80, 90, 120), dim = Color3.fromRGB(120, 130, 160), scroll = Color3.fromRGB(190, 198, 220) },
+	}
+	local BGORDER = { "Black", "Midnight", "Crimson", "Forest", "Ocean", "Purple", "Rose", "Slate", "Coffee", "Teal", "Sunset", "Olive", "Light" }
+	local function applyBG(name)
+		local t = BGS[name]
+		if not t then return end
+		for k, v in pairs(t) do Aurora:UpdateThemeColor(k, v) end
+	end
+	local PACKS = {
+		Blood = { "Crimson", "Crimson" }, Ocean = { "Cyan", "Ocean" }, Sakura = { "Pink", "Rose" }, Matrix = { "Lime", "Black" },
+		GoldBlack = { "Gold", "Black" }, NeonPurple = { "Magenta", "Purple" }, Forest = { "Emerald", "Forest" }, Sunset = { "Orange", "Sunset" },
+		Ice = { "Sky", "Slate" }, Royal = { "Indigo", "Midnight" }, Coffee = { "Amber", "Coffee" }, Snow = { "Blue", "Light" },
+	}
+	sPack:AddDropdown("Theme Pack (renk + arka plan)", { "Blood", "Ocean", "Sakura", "Matrix", "GoldBlack", "NeonPurple", "Forest", "Sunset", "Ice", "Royal", "Coffee", "Snow" }, "Sec", function(o)
+		local p = PACKS[o]
+		if not p then return end
+		Aurora:SetAccent(p[1], true)
+		applyBG(p[2])
+	end)
+	sPack:AddDropdown("Background Preset", BGORDER, "Sec", function(o) applyBG(o) end)
+end
 
 local sThemeBg = Settings:AddSection("Theme Backgrounds")
 sThemeBg:AddColorPicker("Background 0 (Top)", T.bg0, function(c) Aurora:UpdateThemeColor("bg0", c) end)
@@ -2400,6 +3171,7 @@ sThemeBg:AddColorPicker("Row 2 Color", T.row2, function(c) Aurora:UpdateThemeCol
 sThemeBg:AddColorPicker("Line / Border Color", T.line, function(c) Aurora:UpdateThemeColor("line", c) end)
 sThemeBg:AddColorPicker("Text Color", T.text, function(c) Aurora:UpdateThemeColor("text", c) end)
 sThemeBg:AddColorPicker("Sub Text Color", T.sub, function(c) Aurora:UpdateThemeColor("sub", c) end)
+sThemeBg:AddColorPicker("Dim Text Color", T.dim, function(c) Aurora:UpdateThemeColor("dim", c) end)
 sThemeBg:AddColorPicker("Scrollbar Color", T.scroll, function(c) Aurora:UpdateThemeColor("scroll", c) end)
 
 local s2 = Settings:AddSection("Config")
@@ -2410,3 +3182,69 @@ s2:AddButton("Reload UI", function() Aurora:Notify("Aurora X", "Zaten guncel.", 
 
 Window:Open()
 return Aurora
+
+end, function(e) return tostring(e) .. "\n" .. tostring(debug.traceback()) end)
+
+if not __ok then
+	-- Hata olursa: Output'a yaz, panoya kopyalamayi dene, ekranda kirmizi kutu goster
+	warn("[Aurora] HATA: " .. tostring(__err))
+	pcall(function()
+		local clip = setclipboard or toclipboard
+		clip("[Aurora error] " .. tostring(__err))
+	end)
+	pcall(function()
+		local host
+		local okH, h = pcall(function() return gethui() end)
+		if okH and h then host = h else host = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui") end
+		local g = Instance.new("ScreenGui")
+		g.Name = "AuroraError"
+		g.ResetOnSpawn = false
+		g.IgnoreGuiInset = true
+		g.DisplayOrder = 1000
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.Position = UDim2.fromScale(0.5, 0.5)
+		f.Size = UDim2.new(0.9, 0, 0, 260)
+		f.BackgroundColor3 = Color3.fromRGB(30, 14, 18)
+		f.BorderSizePixel = 0
+		f.Parent = g
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0, 10)
+		c.Parent = f
+		local st = Instance.new("UIStroke")
+		st.Color = Color3.fromRGB(255, 90, 110)
+		st.Thickness = 2
+		st.Parent = f
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Position = UDim2.fromOffset(14, 10)
+		t.Size = UDim2.new(1, -28, 0, 22)
+		t.Font = Enum.Font.GothamBold
+		t.TextSize = 15
+		t.TextColor3 = Color3.fromRGB(255, 130, 145)
+		t.TextXAlignment = Enum.TextXAlignment.Left
+		t.Text = "Aurora hata verdi (bu yaziyi gonder). Kapatmak icin dokun."
+		t.Parent = f
+		local m = Instance.new("TextLabel")
+		m.BackgroundTransparency = 1
+		m.Position = UDim2.fromOffset(14, 38)
+		m.Size = UDim2.new(1, -28, 1, -48)
+		m.Font = Enum.Font.Code
+		m.TextSize = 13
+		m.TextColor3 = Color3.fromRGB(255, 255, 255)
+		m.TextWrapped = true
+		m.TextXAlignment = Enum.TextXAlignment.Left
+		m.TextYAlignment = Enum.TextYAlignment.Top
+		m.TextSelectable = true
+		m.Text = tostring(__err)
+		m.Parent = f
+		local b = Instance.new("TextButton")
+		b.BackgroundTransparency = 1
+		b.Size = UDim2.fromScale(1, 1)
+		b.Text = ""
+		b.ZIndex = 0
+		b.Parent = f
+		b.MouseButton1Click:Connect(function() g:Destroy() end)
+		g.Parent = host
+	end)
+end
