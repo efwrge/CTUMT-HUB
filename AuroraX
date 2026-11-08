@@ -1,8 +1,6 @@
 --[[
-  AURORA X - ULTIMATE INTEGRATED SCRIPT (PC + Mobile)
-  - Aimbot: PC (tus / sag tik) ve MOBIL (ekran butonu) icin ayri ayarlandi
-  - Mobil cihazlar icin ekran olceklendirmesi ve baslangic boyutu optimize edildi
-  - Kapatinca (X) tum ozellikler temizlenir (ESP, hitbox, render step'ler)
+  AURORA X - ULTIMATE INTEGRATED SCRIPT (Mobile Optimized Edition)
+  - Mobil cihazlar için ekran ölçeklendirmesi ve başlangıç boyutu optimize edildi.
 ]]
 
 local Players = game:GetService("Players")
@@ -14,13 +12,6 @@ local Stats = game:GetService("Stats")
 
 local lp = Players.LocalPlayer
 local Aurora = {}
-
--- arayuz kapaninca calisacak temizlik fonksiyonlari
-local cleanupFns = {}
-local function onCleanup(fn) table.insert(cleanupFns, fn) end
-
-local isTouch = UIS.TouchEnabled                                  -- dokunmatik ekran var mi
-local touchOnly = UIS.TouchEnabled and not UIS.MouseEnabled       -- sadece dokunmatik (telefon / tablet)
 
 ------------------------------------------------------------------ TEMA & RENKLER
 local DEFAULT_T = {
@@ -117,24 +108,17 @@ end
 local function list(gap)
 	return new("UIListLayout", { Padding = UDim.new(0, gap or 8), SortOrder = Enum.SortOrder.LayoutOrder })
 end
-
--- Etiketler: metin rengi tema rolune (text / sub / dim) baglanir, tema degisince guncellenir
 local function label(p)
 	p.BackgroundTransparency = 1
 	p.Font = p.Font or Enum.Font.GothamMedium
 	p.TextColor3 = p.TextColor3 or T.text
 	p.TextSize = p.TextSize or 13
 	p.TextXAlignment = p.TextXAlignment or Enum.TextXAlignment.Left
-	local role
-	if p.TextColor3 == T.text then role = "text"
-	elseif p.TextColor3 == T.sub then role = "sub"
-	elseif p.TextColor3 == T.dim then role = "dim" end
 	local l = new("TextLabel", p)
-	if role then
-		onThemeChange(function(k, c)
-			if k == role then l.TextColor3 = c end
-		end)
-	end
+	onThemeChange(function(k, c)
+		if k == "text" and (p.TextColor3 == T.text or p.TextColor3 == nil) then l.TextColor3 = c end
+		if (k == "sub" or k == "dim") and (p.TextColor3 == T.sub or p.TextColor3 == T.dim) then l.TextColor3 = c end
+	end)
 	return l
 end
 local function accentGrad(parent, rot)
@@ -144,81 +128,22 @@ local function accentGrad(parent, rot)
 	return g
 end
 
-local function isPointer(i)
-	return i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch
-end
-local function isMove(i)
-	return i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch
-end
-
--- tus / fare tusu eslesmesi: bind = { kind = "key"|"mouse", value = Enum } veya Enum.KeyCode
-local function matchesKey(input, b)
-	if not b then return false end
-	if type(b) == "table" then
-		if b.kind == "mouse" then return input.UserInputType == b.value end
-		if b.kind == "key" then return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == b.value end
-	elseif typeof(b) == "EnumItem" then
-		return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == b
-	end
-	return false
-end
-
--- 0..1 suruklemesi. scroll verilirse surukleme sirasinda sayfa kaymasi kapanir (mobilde onemli)
-local conns = {}
-local function makeDrag(track, fn, scroll)
+local function makeDrag(track, fn)
 	local dragging = false
-	local function rel(i)
-		return math.clamp((i.Position.X - track.AbsolutePosition.X) / math.max(1, track.AbsoluteSize.X), 0, 1)
-	end
-	table.insert(conns, track.InputBegan:Connect(function(i)
-		if isPointer(i) then
+	track.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
-			if scroll then scroll.ScrollingEnabled = false end
-			fn(rel(i))
+			fn(math.clamp((i.Position.X - track.AbsolutePosition.X) / math.max(1, track.AbsoluteSize.X), 0, 1))
 		end
-	end))
-	table.insert(conns, UIS.InputChanged:Connect(function(i)
-		if dragging and isMove(i) then fn(rel(i)) end
-	end))
-	table.insert(conns, UIS.InputEnded:Connect(function(i)
-		if dragging and isPointer(i) then
-			dragging = false
-			if scroll then scroll.ScrollingEnabled = true end
+	end)
+	UIS.InputChanged:Connect(function(i)
+		if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			fn(math.clamp((i.Position.X - track.AbsolutePosition.X) / math.max(1, track.AbsoluteSize.X), 0, 1))
 		end
-	end))
-end
-
--- Surukleme: konum her zaman "scale" olarak yazilir, UIScale ne olursa olsun pencere parmagi / mouse'u birebir takip eder.
--- Hedefin AnchorPoint'i (0.5, 0.5) olmali. st.just = suruklemeden hemen sonra true (dokunma / tiklama ayrimi icin)
-local function makeDraggable(handle, target)
-	local st = { moved = 0, just = false }
-	local dragging, startIn, startCenter = false, nil, nil
-	table.insert(conns, handle.InputBegan:Connect(function(i)
-		if isPointer(i) then
-			dragging = true
-			st.moved = 0
-			startIn = Vector2.new(i.Position.X, i.Position.Y)
-			startCenter = target.AbsolutePosition + target.AbsoluteSize / 2
-		end
-	end))
-	table.insert(conns, UIS.InputChanged:Connect(function(i)
-		if dragging and isMove(i) then
-			local vp = workspace.CurrentCamera.ViewportSize
-			local d = Vector2.new(i.Position.X, i.Position.Y) - startIn
-			st.moved = math.max(st.moved, d.Magnitude)
-			local c = startCenter + d
-			c = Vector2.new(math.clamp(c.X, 30, vp.X - 30), math.clamp(c.Y, 30, vp.Y - 30))
-			target.Position = UDim2.fromScale(c.X / vp.X, c.Y / vp.Y)
-		end
-	end))
-	table.insert(conns, UIS.InputEnded:Connect(function(i)
-		if dragging and isPointer(i) then
-			dragging = false
-			st.just = st.moved > 6
-			task.delay(0.08, function() st.just = false end)
-		end
-	end))
-	return st
+	end)
+	UIS.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging = false end
+	end)
 end
 
 ------------------------------------------------------------------ SCREENGUI
@@ -234,10 +159,8 @@ if oldGui then oldGui:Destroy() end
 local gui = new("ScreenGui", { Name = "AuroraX", ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 100, IgnoreGuiInset = true })
 gui.Parent = host
 
-gui.Destroying:Connect(function()
-	for _, fn in ipairs(cleanupFns) do pcall(fn) end
-	for _, c in ipairs(conns) do c:Disconnect() end
-end)
+local conns = {}
+gui.Destroying:Connect(function() for _, c in ipairs(conns) do c:Disconnect() end end)
 
 ------------------------------------------------------------------ BİLDİRİMLER
 local notifHolder = new("Frame", { Size = UDim2.new(0, 300, 1, -28), Position = UDim2.new(1, -316, 0, 14), BackgroundTransparency = 1 }, {
@@ -268,8 +191,8 @@ function Aurora:Notify(title, body, duration, kind)
 	if not col then onAccent(function(a) ic.BackgroundColor3 = a end) end
 	ic.Parent = head
 	label({ Text = glyph, Font = Enum.Font.GothamBlack, TextSize = 16, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) }).Parent = ic
-	label({ Text = tostring(title), Font = Enum.Font.GothamBold, TextSize = 13, Size = UDim2.new(1, -46, 0, 16), Position = UDim2.fromOffset(46, 1) }).Parent = head
-	label({ Text = tostring(body), TextSize = 12, TextColor3 = T.sub, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -46, 0, 14), Position = UDim2.fromOffset(46, 19) }).Parent = head
+	label({ Text = title, Font = Enum.Font.GothamBold, TextSize = 13, Size = UDim2.new(1, -46, 0, 16), Position = UDim2.fromOffset(46, 1) }).Parent = head
+	label({ Text = body, TextSize = 12, TextColor3 = T.sub, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -46, 0, 14), Position = UDim2.fromOffset(46, 19) }).Parent = head
 	head.Parent = card
 
 	local track = new("Frame", { Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = T.row2, BorderSizePixel = 0, LayoutOrder = 2 }, { corner(2) })
@@ -291,8 +214,6 @@ function Aurora:Notify(title, body, duration, kind)
 end
 
 ------------------------------------------------------------------ PENCERE & UI MİMARİSİ
-local userMul = 1 -- kullanici olcek carpani (Settings > Menu Scale)
-
 function Aurora:CreateWindow(titleText, subtitle)
 	local Window = {}
 	local tabs, tabBtns, rows = {}, {}, {}
@@ -300,9 +221,10 @@ function Aurora:CreateWindow(titleText, subtitle)
 	local TOP, STATUS, SIDE = 54, 28, 184
 
 	local holder = new("Frame", { Name = "Holder", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(W, H), BackgroundTransparency = 1, Visible = false })
-
-	-- MOBİL İÇİN: telefon ekranlarında devasa durmaması için otomatik küçültme
-	local initialScale = touchOnly and 0.65 or 0.85
+	
+	-- MOBİL İÇİN DÜZENLENDİ: Telefon ekranlarında devasa durmaması için otomatik küçültme oranı eklendi
+	local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
+	local initialScale = isMobile and 0.65 or 0.85
 	local uiscale = new("UIScale", { Scale = initialScale })
 	uiscale.Parent = holder
 	holder.Parent = gui
@@ -310,17 +232,17 @@ function Aurora:CreateWindow(titleText, subtitle)
 	local function fitScale()
 		local vp = workspace.CurrentCamera.ViewportSize
 		local s = math.min((vp.X - 24) / W, (vp.Y - 24) / H, vp.Y / 720)
-		if touchOnly then s = math.clamp(s, 0.4, 0.75) else s = math.max(0.4, math.min(3, s)) end
-		return math.clamp(s * userMul, 0.3, 3)
+		if isMobile then
+			return math.clamp(s, 0.4, 0.75)
+		end
+		return math.max(0.4, math.min(3, s))
 	end
 
-	local isOpen = false
-	function Aurora:SetMenuScale(v)
-		userMul = math.clamp(v, 0.4, 1.6)
-		if isOpen then tween(uiscale, 0.2, { Scale = fitScale() }) end
+	function Aurora:SetMenuScale(scaleVal)
+		uiscale.Scale = math.clamp(scaleVal, 0.4, 1.5)
 	end
 	function Aurora:GetMenuScale()
-		return userMul
+		return uiscale.Scale
 	end
 
 	new("ImageLabel", {
@@ -332,7 +254,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 	local win = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 1 })
 	local bgLayer = new("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, GroupTransparency = 1, ZIndex = 0 }, { corner(18) })
 	bgLayer.Parent = win
-
+	
 	local bgGrad = new("UIGradient", { Rotation = 90, Color = ColorSequence.new(T.bg0, T.bg1) })
 	local bgBase = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, { bgGrad })
 	bgBase.Parent = bgLayer
@@ -385,8 +307,10 @@ function Aurora:CreateWindow(titleText, subtitle)
 	accentGrad(logo, 45)
 	label({ Text = "A", Font = Enum.Font.GothamBlack, TextSize = 17, TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) }).Parent = logo
 	logo.Parent = top
-	label({ Text = titleText or "Aurora X", Font = Enum.Font.GothamBold, TextSize = 16, Size = UDim2.fromOffset(180, 20), Position = UDim2.fromOffset(60, 9), TextColor3 = T.text, TextTruncate = Enum.TextTruncate.AtEnd }).Parent = top
-	label({ Text = subtitle or "v2.0", TextSize = 11, TextColor3 = T.dim, Size = UDim2.fromOffset(180, 14), Position = UDim2.fromOffset(60, 29), TextTruncate = Enum.TextTruncate.AtEnd }).Parent = top
+	label({ Text = titleText or "Aurora X", Font = Enum.Font.GothamBold, TextSize = 16, Size = UDim2.new(180, 20), Position = UDim2.fromOffset(60, 9), TextColor3 = T.text }).Parent = top
+	local subtitleLabel = label({ Text = subtitle or "v2.0", TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(180, 14), Position = UDim2.fromOffset(60, 29) })
+	subtitleLabel.Parent = top
+	onThemeChange(function(k, c) if k == "dim" then subtitleLabel.TextColor3 = c end end)
 
 	local searchBox = new("Frame", { Size = UDim2.fromOffset(210, 32), Position = UDim2.new(1, -330, 0, 11), BackgroundColor3 = T.row, BorderSizePixel = 0 }, { corner(10), stroke(T.line, 1, 0.3) })
 	onThemeChange(function(k, c) if k == "row" then searchBox.BackgroundColor3 = c end end)
@@ -431,7 +355,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 	avRing.Parent = av
 	task.spawn(function()
 		local ok, img = pcall(function() return Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420) end)
-		if ok and av.Parent then av.Image = img end
+		if ok then av.Image = img end
 	end)
 	label({ Text = lp.DisplayName, Font = Enum.Font.GothamBold, TextSize = 12, TextColor3 = T.text, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -60, 0, 16), Position = UDim2.fromOffset(54, 10) }).Parent = prof
 	local badge = new("Frame", { Size = UDim2.fromOffset(62, 16), Position = UDim2.fromOffset(54, 29), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, { corner(8) })
@@ -482,12 +406,26 @@ function Aurora:CreateWindow(titleText, subtitle)
 		end))
 	end
 
-	------------------------------------------------ SÜRÜKLEME (scale tabanli, mobilde de dogru calisir)
-	makeDraggable(top, holder)
+	------------------------------------------------ SÜRÜKLEME
+	do
+		local dragging, startPos, startIn
+		top.InputBegan:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				dragging, startIn, startPos = true, i.Position, holder.Position
+				i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then dragging = false end end)
+			end
+		end)
+		UIS.InputChanged:Connect(function(i)
+			if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+				local d = i.Position - startIn
+				holder.Position = UDim2.new(startPos.X.Scale, math.floor(startPos.X.Offset + d.X), startPos.Y.Scale, math.floor(startPos.Y.Offset + d.Y))
+			end
+		end)
+	end
 
 	------------------------------------------------ AÇ / KAPA & MOBİL LAUNCHER
 	local lBase = math.min(2, math.max(1, fitScale()))
-	local launcher = new("TextButton", { Name = "Launcher", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.05, 0.88), Size = UDim2.fromOffset(56, 56), BackgroundColor3 = T.bg0, BorderSizePixel = 0, Visible = true, ZIndex = 20 }, { corner(18) })
+	local launcher = new("TextButton", { Name = "Launcher", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 20, 1, -20), Size = UDim2.fromOffset(56, 56), BackgroundColor3 = T.bg0, BorderSizePixel = 0, Visible = true, ZIndex = 20 }, { corner(18) })
 	onThemeChange(function(k, c) if k == "bg0" then launcher.BackgroundColor3 = c end end)
 	local lStroke = stroke(accent, 1.6, 0.1)
 	onAccent(function(a) lStroke.Color = a end)
@@ -501,12 +439,17 @@ function Aurora:CreateWindow(titleText, subtitle)
 	launcher.Parent = gui
 	launcher.MouseEnter:Connect(function() tween(lScale, 0.15, { Scale = lBase * 1.1 }) end)
 	launcher.MouseLeave:Connect(function() tween(lScale, 0.15, { Scale = lBase }) end)
-	local launcherDrag = makeDraggable(launcher, launcher) -- telefonda engel olursa surukleyip tasiyabilirsin
 
+	local isOpen, snapped = false, false
 	local function setOpen(v)
 		isOpen = v
 		if v then
 			launcher.Visible = false
+			if not snapped then
+				snapped = true
+				local vp = workspace.CurrentCamera.ViewportSize
+				holder.Position = UDim2.fromOffset(math.floor(vp.X / 2), math.floor(vp.Y / 2))
+			end
 			holder.Visible = true
 			tween(uiscale, 0.5, { Scale = fitScale() }, Enum.EasingStyle.Back)
 			tween(bgLayer, 0.35, { GroupTransparency = 0 })
@@ -519,13 +462,6 @@ function Aurora:CreateWindow(titleText, subtitle)
 	table.insert(conns, UIS.InputBegan:Connect(function(i, gp)
 		if not gp and i.KeyCode == Enum.KeyCode.RightShift then setOpen(not isOpen) end
 	end))
-	-- ekran donerse / boyutu degisirse menuyu yeniden olcekle
-	local camNow = workspace.CurrentCamera
-	if camNow then
-		table.insert(conns, camNow:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-			if isOpen then tween(uiscale, 0.2, { Scale = fitScale() }) end
-		end))
-	end
 	closeB.MouseButton1Click:Connect(function()
 		setOpen(false)
 		task.delay(0.3, function() gui:Destroy() end)
@@ -540,10 +476,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 			end
 		end)
 	end)
-	launcher.MouseButton1Click:Connect(function()
-		if launcherDrag.just then return end
-		setOpen(true)
-	end)
+	launcher.MouseButton1Click:Connect(function() setOpen(true) end)
 
 	------------------------------------------------ ARAMA
 	search:GetPropertyChangedSignal("Text"):Connect(function()
@@ -594,9 +527,9 @@ function Aurora:CreateWindow(titleText, subtitle)
 		local bar = new("Frame", { Size = UDim2.fromOffset(3, 0), Position = UDim2.fromOffset(-12, 20), BackgroundColor3 = accent, BorderSizePixel = 0 }, { corner(2) })
 		onAccent(function(a) bar.BackgroundColor3 = a end)
 		bar.Parent = btn
-		local g = label({ Text = glyph or "", Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = T.dim, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromOffset(34, 40), Position = UDim2.fromOffset(4, 0) })
+		local g = label({ Text = "", Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = T.dim, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromOffset(34, 40), Position = UDim2.fromOffset(4, 0) })
 		g.Parent = btn
-		local tx = label({ Text = name, Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = T.sub, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -44, 1, 0), Position = UDim2.fromOffset(40, 0) })
+		local tx = label({ Text = name, Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = T.sub, Size = UDim2.new(1, -44, 1, 0), Position = UDim2.fromOffset(40, 0) })
 		tx.Parent = btn
 		onAccent(function(a) if current == name then g.TextColor3 = a end end)
 		btn.MouseEnter:Connect(function() if current ~= name then tween(bg, 0.15, { BackgroundTransparency = 0.93 }) end end)
@@ -656,7 +589,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 
 			function Section:AddLabel(t)
 				local r = row(32, t)
-				label({ Text = t, TextSize = 12, TextColor3 = T.sub, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -28, 1, 0), Position = UDim2.fromOffset(14, 0) }).Parent = r
+				label({ Text = t, TextSize = 12, TextColor3 = T.sub, Size = UDim2.new(1, -28, 1, 0), Position = UDim2.fromOffset(14, 0) }).Parent = r
 			end
 
 			function Section:AddButton(t, cb)
@@ -667,10 +600,8 @@ function Aurora:CreateWindow(titleText, subtitle)
 				b.Parent = r
 				label({ Text = ">", Font = Enum.Font.GothamBold, TextSize = 18, TextColor3 = T.dim, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromOffset(30, 40), Position = UDim2.new(1, -34, 0, 0) }).Parent = r
 				b.MouseButton1Click:Connect(function()
-					-- ripple: pencere UIScale ile olceklendigi icin konum olcege bolunur
 					local mp = UIS:GetMouseLocation()
-					local sc = math.max(uiscale.Scale, 0.01)
-					local rip = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset((mp.X - r.AbsolutePosition.X) / sc, (mp.Y - r.AbsolutePosition.Y) / sc), Size = UDim2.fromOffset(0, 0), BackgroundColor3 = accent, BackgroundTransparency = 0.6, BorderSizePixel = 0 }, { corner(200) })
+					local rip = new("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(mp.X - r.AbsolutePosition.X, mp.Y - r.AbsolutePosition.Y), Size = UDim2.fromOffset(0, 0), BackgroundColor3 = accent, BackgroundTransparency = 0.6, BorderSizePixel = 0 }, { corner(200) })
 					rip.Parent = r
 					tween(rip, 0.55, { Size = UDim2.fromOffset(300, 300), BackgroundTransparency = 1 }).Completed:Connect(function() rip:Destroy() end)
 					if cb then task.spawn(cb) end
@@ -681,7 +612,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 				local state = default and true or false
 				local r = row(40, t)
 				hover(r)
-				label({ Text = t, Size = UDim2.new(1, -80, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text, TextTruncate = Enum.TextTruncate.AtEnd }).Parent = r
+				label({ Text = t, Size = UDim2.new(1, -80, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text }).Parent = r
 				local pill = new("TextButton", { Text = "", Size = UDim2.fromOffset(42, 22), Position = UDim2.new(1, -56, 0.5, -11), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, BorderSizePixel = 0 }, { corner(11) })
 				local pg = new("UIGradient", {})
 				pg.Parent = pill
@@ -704,13 +635,13 @@ function Aurora:CreateWindow(titleText, subtitle)
 
 			function Section:AddSlider(t, min, max, default, cb, step)
 				step = step or 1
-				local value = math.clamp(default or min, min, max)
+				local value = default or min
 				local r = row(58, t)
 				hover(r)
-				label({ Text = t, Size = UDim2.new(1, -100, 0, 28), Position = UDim2.fromOffset(14, 4), TextColor3 = T.text, TextTruncate = Enum.TextTruncate.AtEnd }).Parent = r
+				label({ Text = t, Size = UDim2.new(1, -100, 0, 28), Position = UDim2.fromOffset(14, 4), TextColor3 = T.text }).Parent = r
 				local vbox = new("Frame", { Size = UDim2.fromOffset(54, 22), Position = UDim2.new(1, -68, 0, 7), BackgroundColor3 = T.bg1, BackgroundTransparency = 0.3, BorderSizePixel = 0 }, { corner(7) })
 				onThemeChange(function(k, c) if k == "bg1" then vbox.BackgroundColor3 = c end end)
-				local val = label({ Text = step < 1 and string.format("%.2f", value) or tostring(value), Font = Enum.Font.Code, TextSize = 12, TextColor3 = T.text, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) })
+				local val = label({ Text = tostring(value), Font = Enum.Font.Code, TextSize = 12, TextColor3 = T.text, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromScale(1, 1) })
 				val.Parent = vbox
 				vbox.Parent = r
 				local track = new("Frame", { Size = UDim2.new(1, -28, 0, 6), Position = UDim2.fromOffset(14, 42), BackgroundColor3 = T.bg1, BorderSizePixel = 0 }, { corner(3) })
@@ -725,14 +656,14 @@ function Aurora:CreateWindow(titleText, subtitle)
 				knob.Parent = fill
 				track.Parent = r
 				local function setRel(rel, fire)
-					rel = math.clamp(rel, 0, 1)
 					value = math.floor((min + (max - min) * rel) / step + 0.5) * step
 					value = math.clamp(value, min, max)
-					val.Text = step < 1 and string.format("%.2f", value) or tostring(value)
+					local shown = step < 1 and string.format("%.2f", value) or tostring(value)
+					val.Text = shown
 					tween(fill, 0.08, { Size = UDim2.new((value - min) / (max - min), 0, 1, 0) })
 					if fire and cb then cb(value) end
 				end
-				makeDrag(track, function(rel) setRel(rel, true) end, scroll)
+				makeDrag(track, function(rel) setRel(rel, true) end)
 				return { Set = function(v) setRel((v - min) / (max - min), true) end }
 			end
 
@@ -744,8 +675,8 @@ function Aurora:CreateWindow(titleText, subtitle)
 				r.ClipsDescendants = true
 				local head = new("TextButton", { Text = "", Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, AutoButtonColor = false })
 				head.Parent = r
-				label({ Text = t, Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text, TextTruncate = Enum.TextTruncate.AtEnd }).Parent = head
-				local cur = label({ Text = current, TextSize = 12, TextColor3 = T.sub, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(0.5, -40, 1, 0), Position = UDim2.new(0.5, 0, 0, 0) })
+				label({ Text = t, Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text }).Parent = head
+				local cur = label({ Text = current, TextSize = 12, TextColor3 = T.sub, TextXAlignment = Enum.TextXAlignment.Right, Size = UDim2.new(0.5, -40, 1, 0), Position = UDim2.new(0.5, 0, 0, 0) })
 				cur.Parent = head
 				local arr = label({ Text = "v", TextSize = 12, TextColor3 = T.dim, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromOffset(26, 40), Position = UDim2.new(1, -30, 0, 0) })
 				arr.Parent = head
@@ -779,22 +710,23 @@ function Aurora:CreateWindow(titleText, subtitle)
 				end)
 			end
 
-			-- onChange(bind): tus degisince | onPress(): atanmis tusa basilinca
-			function Section:AddKeybind(t, default, onChange, onPress)
+			function Section:AddKeybind(t, default, cb)
 				local key = default
-				if typeof(key) == "EnumItem" then key = { kind = "key", value = key } end
 				local listening = false
 				local r = row(40, t)
 				hover(r)
-				label({ Text = t, Size = UDim2.new(1, -110, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text, TextTruncate = Enum.TextTruncate.AtEnd }).Parent = r
-
+				label({ Text = t, Size = UDim2.new(1, -110, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text }).Parent = r
+				
 				local function getBindName(b)
+					if not b then return "None" end
 					if type(b) == "table" then
 						if b.kind == "mouse" then
 							return (b.value == Enum.UserInputType.MouseButton2 and "Mouse 2") or (b.value == Enum.UserInputType.MouseButton3 and "Mouse 3") or "Mouse"
 						elseif b.kind == "key" then
 							return b.value.Name
 						end
+					elseif typeof(b) == "EnumItem" then
+						return b.Name
 					end
 					return "None"
 				end
@@ -802,7 +734,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 				local kb = new("TextButton", { Text = getBindName(key), Size = UDim2.fromOffset(84, 26), Position = UDim2.new(1, -98, 0.5, -13), BackgroundColor3 = T.bg1, BackgroundTransparency = 0.3, Font = Enum.Font.Code, TextSize = 12, TextColor3 = T.sub, AutoButtonColor = false, BorderSizePixel = 0 }, { corner(8), stroke(T.line, 1, 0.3) })
 				onThemeChange(function(k, c) if k == "bg1" then kb.BackgroundColor3 = c end end)
 				kb.Parent = r
-
+				
 				kb.MouseButton1Click:Connect(function()
 					if listening then return end
 					listening = true
@@ -818,7 +750,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 								key = { kind = "key", value = i.KeyCode }
 								kb.Text = i.KeyCode.Name
 								kb.TextColor3 = T.sub
-								if onChange then task.spawn(onChange, key) end
+								if cb then cb(key) end
 							else
 								listening = false
 								kb.Text = getBindName(key)
@@ -827,12 +759,10 @@ function Aurora:CreateWindow(titleText, subtitle)
 						elseif i.UserInputType == Enum.UserInputType.MouseButton2 or i.UserInputType == Enum.UserInputType.MouseButton3 then
 							listening = false
 							key = { kind = "mouse", value = i.UserInputType }
-							kb.Text = getBindName(key)
+							kb.Text = (i.UserInputType == Enum.UserInputType.MouseButton2 and "Mouse 2") or "Mouse 3"
 							kb.TextColor3 = T.sub
-							if onChange then task.spawn(onChange, key) end
+							if cb then cb(key) end
 						end
-					elseif onPress and not gp and key and matchesKey(i, key) then
-						task.spawn(onPress)
 					end
 				end))
 			end
@@ -843,7 +773,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 				r.ClipsDescendants = true
 				local head = new("TextButton", { Text = "", Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, AutoButtonColor = false })
 				head.Parent = r
-				label({ Text = t, Size = UDim2.new(1, -80, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text, TextTruncate = Enum.TextTruncate.AtEnd }).Parent = head
+				label({ Text = t, Size = UDim2.new(1, -80, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text }).Parent = head
 				local sw = new("Frame", { Size = UDim2.fromOffset(34, 20), Position = UDim2.new(1, -48, 0.5, -10), BackgroundColor3 = Color3.fromHSV(h, s, v), BorderSizePixel = 0 }, { corner(6), stroke(T.line, 1, 0.2) })
 				sw.Parent = head
 				local function apply()
@@ -856,7 +786,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 					local k = new("Frame", { Size = UDim2.fromOffset(6, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, { corner(3), stroke(Color3.new(0, 0, 0), 1, 0.4) })
 					k.Parent = tr
 					tr.Parent = r
-					makeDrag(tr, function(rel) k.Position = UDim2.fromScale(rel, 0.5) onRel(rel) end, scroll)
+					makeDrag(tr, function(rel) k.Position = UDim2.fromScale(rel, 0.5) onRel(rel) end)
 					return k
 				end
 				local hueSeq = ColorSequence.new({
@@ -877,7 +807,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 			function Section:AddTextbox(t, placeholder, cb)
 				local r = row(40, t)
 				hover(r)
-				label({ Text = t, Size = UDim2.new(0.45, 0, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text, TextTruncate = Enum.TextTruncate.AtEnd }).Parent = r
+				label({ Text = t, Size = UDim2.new(0.45, 0, 1, 0), Position = UDim2.fromOffset(14, 0), TextColor3 = T.text }).Parent = r
 				local tb = new("TextBox", { Size = UDim2.new(0.5, -20, 0, 26), Position = UDim2.new(0.5, 6, 0.5, -13), BackgroundColor3 = T.bg1, BackgroundTransparency = 0.3, BorderSizePixel = 0, Text = "", PlaceholderText = placeholder or "...", PlaceholderColor3 = T.dim, TextColor3 = T.text, Font = Enum.Font.Gotham, TextSize = 12, ClearTextOnFocus = false }, { corner(8), pad(10, 0, 10, 0), stroke(T.line, 1, 0.3) })
 				onThemeChange(function(k, c) if k == "bg1" then tb.BackgroundColor3 = c end end)
 				tb.Parent = r
@@ -976,7 +906,7 @@ function Aurora:CreateWindow(titleText, subtitle)
 				label({ Text = title, Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = T.dim, Size = UDim2.new(1, -28, 0, 14), Position = UDim2.fromOffset(14, 12) }).Parent = card
 				local value = label({ Text = "--", Font = Enum.Font.GothamBold, TextSize = 24, Size = UDim2.new(0.6, 0, 0, 30), Position = UDim2.fromOffset(14, 28), TextColor3 = T.text })
 				value.Parent = card
-				local sub = label({ Text = "", TextSize = 11, TextColor3 = T.dim, TextTruncate = Enum.TextTruncate.AtEnd, Size = UDim2.new(1, -28, 0, 14), Position = UDim2.fromOffset(14, 64) })
+				local sub = label({ Text = "", TextSize = 11, TextColor3 = T.dim, Size = UDim2.new(1, -28, 0, 14), Position = UDim2.fromOffset(14, 64) })
 				sub.Parent = card
 				local bars, hist = {}, {}
 				for i = 1, 12 do
@@ -1137,7 +1067,7 @@ local jumpPowerEnabled = false
 local enforcedClockTime = nil
 local enforcedAmbient = nil
 
-table.insert(conns, RunService.Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function()
 	local char = lp.Character
 	if char then
 		local hum = char:FindFirstChildOfClass("Humanoid")
@@ -1158,7 +1088,7 @@ table.insert(conns, RunService.Heartbeat:Connect(function()
 	if enforcedAmbient then
 		Lighting.Ambient = enforcedAmbient
 	end
-end))
+end)
 
 ------------------------------------------------------------------ SAF ESP MODÜLÜ ENTEGRASYONU
 local ESP = {
@@ -1198,15 +1128,12 @@ local R6 = {{'Head', 'Torso'}, {'Torso', 'Left Arm'}, {'Torso', 'Right Arm'}, {'
 local world = Instance.new('Folder', workspace)
 world.Name = 'KPUD_ESP_WORLD'
 
--- NOT: ScreenGui'in icine ScreenGui konunca cizilmez. Cizim katmani bu yuzden Frame (menunun altinda kalir).
-local overlay = Instance.new('Frame')
+local overlay = Instance.new('ScreenGui', gui)
 overlay.Name = 'KPUD_ESP_GUI'
-overlay.Size = UDim2.fromScale(1, 1)
-overlay.BackgroundTransparency = 1
-overlay.BorderSizePixel = 0
-overlay.Active = false
-overlay.ZIndex = -5
-overlay.Parent = gui
+overlay.ResetOnSpawn = false
+overlay.IgnoreGuiInset = true
+overlay.DisplayOrder = 245
+overlay.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local targets, npcs, pcache = {}, {}, {}
 local slowTimer, VW, VH = 0, 800, 600
@@ -1417,12 +1344,7 @@ local function addNPC(h)
 	local m = h and h.Parent
 	if m and m:IsA('Model') and m ~= lp.Character and not Players:GetPlayerFromCharacter(m) then npcs[m] = true end
 end
-local function scanNPCsNow()
-	for _, o in ipairs(workspace:GetDescendants()) do
-		if o:IsA('Humanoid') then addNPC(o) end
-	end
-end
-table.insert(conns, workspace.DescendantAdded:Connect(function(o) if ESP.NPC and o:IsA('Humanoid') then task.defer(addNPC, o) end end))
+workspace.DescendantAdded:Connect(function(o) if ESP.NPC and o:IsA('Humanoid') then task.defer(addNPC, o) end end)
 
 local function slowESP()
 	local cam, mine = workspace.CurrentCamera, lp.Character and lp.Character:FindFirstChild('HumanoidRootPart')
@@ -1633,7 +1555,6 @@ local function drawESP(d, cam, camCF)
 	end
 end
 
-pcall(function() RunService:UnbindFromRenderStep('KPUD_PURE_ESP_RENDER') end)
 RunService:BindToRenderStep('KPUD_PURE_ESP_RENDER', Enum.RenderPriority.Camera.Value + 20, function(dt)
 	slowTimer = slowTimer + dt
 	if slowTimer >= .12 then
@@ -1651,16 +1572,12 @@ RunService:BindToRenderStep('KPUD_PURE_ESP_RENDER', Enum.RenderPriority.Camera.V
 	end
 end)
 
-onCleanup(function()
-	pcall(function() RunService:UnbindFromRenderStep('KPUD_PURE_ESP_RENDER') end)
-	clearAllESP()
-	pcall(function() world:Destroy() end)
-end)
-
------------------------------------------------------------------- AIMBOT ENTEGRASYONU (PC + MOBIL)
+------------------------------------------------------------------ AIMBOT ENTEGRASYONU
+local AIM_MOBILE = UIS.TouchEnabled and not UIS.MouseEnabled -- saf dokunmatik cihaz (telefon/tablet)
+local AimButton = {}
 local Aim = {
 	Enabled = false,
-	Mode = "Hold",
+	Mode = AIM_MOBILE and "Toggle" or "Hold", -- mobilde dokun-ac/kapat, PC'de basili tut
 	Key = { kind = "mouse", value = Enum.UserInputType.MouseButton2 },
 	Part = "Head",
 	Priority = "Closest to cursor",
@@ -1669,68 +1586,25 @@ local Aim = {
 	Prediction = false,
 	PredStrength = 0.1,
 	FOV = 150,
-	ShowFOV = false,
+	ShowFOV = AIM_MOBILE, -- mobilde FOV dairesi ekran ortasinda gorunsun
+	ShowButton = true,
+	ButtonSize = AIM_MOBILE and 72 or 58,
 	FOVColor = Color3.fromRGB(139, 108, 255),
 	MaxDistance = 1000,
 	TeamCheck = false,
 	WallCheck = false,
 	Sticky = true,
-	Center = "Auto",          -- Auto: PC'de fare imleci, telefonda ekran ortasi | Screen | Cursor
-	Button = isTouch,         -- ekrandaki AIM butonu (dokunmatik cihazlarda otomatik acik)
-	BtnSize = 66,
-	BtnX = 88,                -- butonun ekrandaki yatay konumu (%)
-	BtnY = 60,                -- butonun ekrandaki dikey konumu (%)
 }
 
-local holdKey, holdBtn, latched, aimTarget = false, false, false, nil
+local holding, latched, aimTarget = false, false, false
+local btnHold = false -- ekrandaki aim butonu basili mi
 local fovCircle = new("Frame", {
 	Name = "AimFOV", AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, BorderSizePixel = 0,
 	Size = UDim2.fromOffset(300, 300), Visible = false, ZIndex = 5,
 }, { new("UICorner", { CornerRadius = UDim.new(0.5, 0) }), stroke(Color3.fromRGB(139, 108, 255), 1.5, 0.15) })
 local fovStroke = fovCircle:FindFirstChildOfClass("UIStroke")
+onAccent(function(a) if not Aim.FOVColor or Aim.FOVColor == Color3.fromRGB(139, 108, 255) then fovStroke.Color = a end end)
 fovCircle.Parent = gui
-
--- Mobil AIM butonu: Hold modunda basili tut, Toggle modunda dokun ac/kapat. Always modunda gizlenir.
-local aimBtn = new("TextButton", {
-	Name = "AimButton", Text = "AIM", Font = Enum.Font.GothamBlack, TextSize = 15, TextColor3 = T.text, AutoButtonColor = false,
-	AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(Aim.BtnX / 100, Aim.BtnY / 100),
-	Size = UDim2.fromOffset(Aim.BtnSize, Aim.BtnSize), BackgroundColor3 = T.row, BackgroundTransparency = 0.12,
-	BorderSizePixel = 0, Visible = false, ZIndex = 40,
-}, { new("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
-local aimBtnStroke = stroke(accent, 2.5, 0.05)
-aimBtnStroke.Parent = aimBtn
-onAccent(function(a) aimBtnStroke.Color = a end)
-aimBtn.Parent = gui
-
-local function applyAimBtnLayout()
-	aimBtn.Size = UDim2.fromOffset(Aim.BtnSize, Aim.BtnSize)
-	aimBtn.Position = UDim2.fromScale(math.clamp(Aim.BtnX, 3, 97) / 100, math.clamp(Aim.BtnY, 8, 92) / 100)
-	aimBtn.TextSize = math.floor(Aim.BtnSize * 0.23)
-end
-applyAimBtnLayout()
-
-local btnInput
-aimBtn.InputBegan:Connect(function(i)
-	if not isPointer(i) then return end
-	if Aim.Mode == "Toggle" then
-		latched = not latched
-	else
-		btnInput = i
-		holdBtn = true
-		i.Changed:Connect(function()
-			if i.UserInputState == Enum.UserInputState.End and btnInput == i then
-				btnInput = nil
-				holdBtn = false
-			end
-		end)
-	end
-end)
-table.insert(conns, UIS.InputEnded:Connect(function(i)
-	if btnInput and i == btnInput then
-		btnInput = nil
-		holdBtn = false
-	end
-end))
 
 local aimRayParams = RaycastParams.new()
 aimRayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -1738,24 +1612,26 @@ aimRayParams.IgnoreWater = true
 
 local CLOSEST_PARTS = { "Head", "UpperTorso", "Torso", "LowerTorso", "HumanoidRootPart" }
 
+local function matchesKey(input, b)
+	if not b then return false end
+	if type(b) == "table" then
+		if b.kind == "mouse" then return input.UserInputType == b.value end
+		if b.kind == "key" then return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == b.value end
+	elseif typeof(b) == "EnumItem" then
+		return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == b
+	end
+	return false
+end
+
 local function isAiming()
 	if not Aim.Enabled then return false end
 	if Aim.Mode == "Always" then return true end
 	if Aim.Mode == "Toggle" then return latched end
-	return holdKey or holdBtn
+	return holding or btnHold
 end
 
--- Nisan merkezi: telefonda (veya son girdi dokunmatiksa) ekran ortasi, PC'de fare imleci
 local function getCursor(cam)
-	local vp = cam.ViewportSize
-	local c = Aim.Center
-	local useScreen = c == "Screen"
-	if c == "Auto" then
-		useScreen = touchOnly or UIS:GetLastInputType() == Enum.UserInputType.Touch
-	end
-	if useScreen or UIS.MouseBehavior == Enum.MouseBehavior.LockCenter then
-		return Vector2.new(vp.X / 2, vp.Y / 2)
-	end
+	if UIS.TouchEnabled and not UIS.MouseEnabled then return cam.ViewportSize / 2 end
 	return UIS:GetMouseLocation()
 end
 
@@ -1809,7 +1685,6 @@ local function evaluateAim(plr, cam, camPos, cursor, ignoreFov)
 	return point, sd, dist, hum
 end
 
-pcall(function() RunService:UnbindFromRenderStep("AimbotUI_Step") end)
 RunService:BindToRenderStep("AimbotUI_Step", Enum.RenderPriority.Camera.Value + 1, function(dt)
 	local cam = workspace.CurrentCamera
 	if not cam then return end
@@ -1824,20 +1699,12 @@ RunService:BindToRenderStep("AimbotUI_Step", Enum.RenderPriority.Camera.Value + 
 	end
 
 	local aiming = isAiming()
-
-	-- mobil buton: gorunurluk ve durum
-	aimBtn.Visible = Aim.Enabled and Aim.Button and Aim.Mode ~= "Always"
-	if aimBtn.Visible then
-		aimBtn.BackgroundColor3 = aiming and accent or T.row
-		aimBtn.TextColor3 = aiming and Color3.new(1, 1, 1) or T.text
-		aimBtn.Text = (aiming and aimTarget) and "LOCK" or "AIM"
-	end
-
 	local point
 	if aiming then
 		local camPos = cam.CFrame.Position
 		if aimTarget and Aim.Sticky then
-			point = evaluateAim(aimTarget, cam, camPos, cursor, true)
+			local p = evaluateAim(aimTarget, cam, camPos, cursor, true)
+			point = p
 		end
 		if not point then
 			aimTarget = nil
@@ -1853,7 +1720,7 @@ RunService:BindToRenderStep("AimbotUI_Step", Enum.RenderPriority.Camera.Value + 
 							score = hum.Health
 						end
 						if not bestScore or score < bestScore then
-							bestScore, point, aimTarget = score, p, plr
+							bestScore, point, _, aimTarget = score, p, d, plr
 						end
 					end
 				end
@@ -1876,18 +1743,146 @@ end)
 table.insert(conns, UIS.InputBegan:Connect(function(input, gp)
 	if gp then return end
 	if matchesKey(input, Aim.Key) then
-		holdKey = true
+		holding = true
 		if Aim.Mode == "Toggle" then latched = not latched end
 	end
 end))
 table.insert(conns, UIS.InputEnded:Connect(function(input)
-	if matchesKey(input, Aim.Key) then holdKey = false end
+	if matchesKey(input, Aim.Key) then holding = false end
 end))
 
-onCleanup(function()
-	pcall(function() RunService:UnbindFromRenderStep("AimbotUI_Step") end)
-	holdKey, holdBtn, latched, aimTarget = false, false, false, nil
-end)
+------------------------------------------------------------------ AIM BUTONU (surukle + bas)
+-- Aimbot acikken ekranda belirir. Surukleyerek tasinir.
+-- Toggle modu: dokun = ac/kapat | Hold modu: basili tut = nisan al | Always: sadece gosterge
+do
+	local aimBtn = new("TextButton", {
+		Name = "AimButton", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0.5),
+		Size = UDim2.fromOffset(Aim.ButtonSize, Aim.ButtonSize), BackgroundColor3 = T.card, BorderSizePixel = 0,
+		Visible = false, ZIndex = 40,
+	}, { new("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
+	local btnScale = new("UIScale", { Scale = 1 })
+	btnScale.Parent = aimBtn
+	local ring = stroke(accent, 2, 0.1)
+	onAccent(function(a) ring.Color = a end)
+	ring.Parent = aimBtn
+
+	local fillF = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 41 }, { new("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
+	accentGrad(fillF, 45)
+	fillF.Parent = aimBtn
+
+	local mainL = new("TextLabel", {
+		Text = "AIM", Font = Enum.Font.GothamBlack, TextScaled = true, BackgroundTransparency = 1, TextColor3 = T.text,
+		Size = UDim2.fromScale(0.8, 0.34), Position = UDim2.fromScale(0.1, 0.2), ZIndex = 42,
+	}, { new("UITextSizeConstraint", { MaxTextSize = 17, MinTextSize = 8 }) })
+	mainL.Parent = aimBtn
+	local subL = new("TextLabel", {
+		Text = "OFF", Font = Enum.Font.GothamBold, TextScaled = true, BackgroundTransparency = 1, TextColor3 = T.sub,
+		Size = UDim2.fromScale(0.7, 0.2), Position = UDim2.fromScale(0.15, 0.56), ZIndex = 42,
+	}, { new("UITextSizeConstraint", { MaxTextSize = 11, MinTextSize = 6 }) })
+	subL.Parent = aimBtn
+	aimBtn.Parent = gui
+
+	local function viewport()
+		local cam = workspace.CurrentCamera
+		return cam and cam.ViewportSize or Vector2.new(1280, 720)
+	end
+
+	function AimButton.Reset()
+		local vp = viewport()
+		aimBtn.Position = UDim2.fromOffset(vp.X - 70, vp.Y * 0.6)
+	end
+	AimButton.Reset()
+
+	local function clampPos(x, y)
+		local vp = viewport()
+		local half = Aim.ButtonSize / 2
+		return math.clamp(x, half, math.max(half, vp.X - half)), math.clamp(y, half, math.max(half, vp.Y - half))
+	end
+
+	-- bas / surukle
+	local pressed, dragged = false, false
+	local startIn, startPos, moveInput = nil, Vector2.new(0, 0), nil
+	local DRAG_THRESHOLD = 10
+
+	aimBtn.InputBegan:Connect(function(i)
+		if i.UserInputType ~= Enum.UserInputType.MouseButton1 and i.UserInputType ~= Enum.UserInputType.Touch then return end
+		pressed, dragged = true, false
+		startIn = i.Position
+		moveInput = i
+		startPos = Vector2.new(aimBtn.Position.X.Offset, aimBtn.Position.Y.Offset)
+		tween(btnScale, 0.1, { Scale = 0.92 })
+		-- Hold modu: kisa bir beklemeden sonra basili say (surukleme baslarsa iptal)
+		task.delay(0.08, function()
+			if pressed and not dragged and Aim.Mode == "Hold" then btnHold = true end
+		end)
+		i.Changed:Connect(function()
+			if i.UserInputState == Enum.UserInputState.End and pressed then
+				pressed = false
+				tween(btnScale, 0.15, { Scale = 1 })
+				if Aim.Mode == "Hold" then
+					btnHold = false
+				elseif Aim.Mode == "Toggle" and not dragged then
+					latched = not latched
+				end
+			end
+		end)
+	end)
+	aimBtn.InputChanged:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then
+			if not pressed then moveInput = i end
+		end
+	end)
+	table.insert(conns, UIS.InputChanged:Connect(function(i)
+		if not pressed or i ~= moveInput then return end
+		if i.UserInputType ~= Enum.UserInputType.MouseMovement and i.UserInputType ~= Enum.UserInputType.Touch then return end
+		local d = i.Position - startIn
+		if not dragged and d.Magnitude >= DRAG_THRESHOLD then
+			dragged = true
+			btnHold = false
+		end
+		if dragged then
+			local x, y = clampPos(startPos.X + d.X, startPos.Y + d.Y)
+			aimBtn.Position = UDim2.fromOffset(x, y)
+		end
+	end))
+
+	-- gorunum: aimbot acikken goster, duruma gore renk/yazi
+	local wasShown, lastKey = false, ""
+	table.insert(conns, RunService.Heartbeat:Connect(function()
+		local show = Aim.Enabled and Aim.ShowButton
+		if not Aim.Enabled then
+			latched, btnHold = false, false
+		end
+		if show ~= wasShown then
+			wasShown = show
+			aimBtn.Visible = show
+			if show then
+				btnScale.Scale = 0
+				tween(btnScale, 0.4, { Scale = 1 }, Enum.EasingStyle.Back)
+			end
+		end
+		if not show then return end
+		local size = Aim.ButtonSize
+		if aimBtn.Size.X.Offset ~= size then
+			aimBtn.Size = UDim2.fromOffset(size, size)
+		end
+		local active = isAiming()
+		local key = tostring(active) .. Aim.Mode
+		if key ~= lastKey then
+			lastKey = key
+			tween(fillF, 0.2, { BackgroundTransparency = active and 0 or 1 })
+			mainL.TextColor3 = active and Color3.new(1, 1, 1) or T.text
+			subL.TextColor3 = active and Color3.new(1, 1, 1) or T.sub
+			if Aim.Mode == "Always" then
+				subL.Text = "ON"
+			elseif Aim.Mode == "Toggle" then
+				subL.Text = active and "ON" or "OFF"
+			else
+				subL.Text = active and "ON" or "HOLD"
+			end
+		end
+	end))
+end
 
 ------------------------------------------------------------------ HİTBOX ENTEGRASYONU
 local Hit = {
@@ -1991,8 +1986,8 @@ local function applyPart(rec, part, sx, sy, sz)
 end
 
 local hitAcc = 0
-table.insert(conns, RunService.Heartbeat:Connect(function(dt)
-	hitAcc = hitAcc + dt
+RunService.Heartbeat:Connect(function(dt)
+	hitAcc += dt
 	if hitAcc < 0.1 then return end
 	hitAcc = 0
 	local cam = workspace.CurrentCamera
@@ -2048,7 +2043,7 @@ table.insert(conns, RunService.Heartbeat:Connect(function(dt)
 			end
 		end
 	end
-end))
+end)
 
 pcall(function() RunService:UnbindFromRenderStep("HitboxUI_Step") end)
 RunService:BindToRenderStep("HitboxUI_Step", Enum.RenderPriority.Last.Value, function()
@@ -2068,25 +2063,12 @@ RunService:BindToRenderStep("HitboxUI_Step", Enum.RenderPriority.Last.Value, fun
 	ourWrite = false
 end)
 
-onCleanup(function()
-	Hit.Enabled = false
-	pcall(function() RunService:UnbindFromRenderStep("HitboxUI_Step") end)
-	for plr, rec in pairs(records) do
-		restoreAll(rec)
-		records[plr] = nil
-	end
-end)
-
 ------------------------------------------------------------------ SEKMELER VE MENÜ KURULUMU
 local Window = Aurora:CreateWindow("Aurora X", "v2.0 - Ultimate Edition")
 
 -- 1. HOME SEKME
 local Home = Window:AddTab("Home", "o")
 Home:AddDashboard()
-local h1 = Home:AddSection("Quick actions")
-h1:AddButton("Show success", function() Aurora:Notify("Basarili", "Islem tamamlandi.", 3.5, "success") end)
-h1:AddButton("Show warning", function() Aurora:Notify("Dikkat", "Bu bir uyari bildirimi.", 3.5, "warn") end)
-h1:AddButton("Show error", function() Aurora:Notify("Hata", "Bir seyler ters gitti.", 3.5, "error") end)
 local h2 = Home:AddSection("Info")
 h2:AddLabel("Arama kutusuyla tum ozellikleri filtreleyebilirsin.")
 h2:AddLabel("Bolum basliklarina tiklayarak katlayabilirsin.")
@@ -2116,8 +2098,7 @@ p1:AddToggle("Sit", false, function(on)
 end)
 
 local p2 = Player:AddSection("Actions")
--- Reset tusu: degisince degil, tusa BASILINCA calisir (4. parametre)
-p2:AddKeybind("Reset keybind", Enum.KeyCode.R, nil, function()
+p2:AddKeybind("Reset keybind", Enum.KeyCode.R, function()
 	local char = lp.Character
 	local h = char and char:FindFirstChildOfClass("Humanoid")
 	if h then h.Health = 0 end
@@ -2174,7 +2155,9 @@ e3:AddToggle("Skeleton", false, function(on) ESP.Skeleton = on end)
 local e4 = ESPTab:AddSection("NPC ESP")
 e4:AddToggle("NPC Enabled", false, function(on)
 	ESP.NPC = on
-	if on then scanNPCsNow() end
+	if on then scanNPCs = scanNPCs or function()
+		for _, o in ipairs(workspace:GetDescendants()) do if o:IsA('Humanoid') then addNPC(o) end end
+	end scanNPCs() end
 end)
 
 local e5 = ESPTab:AddSection("Colors")
@@ -2186,19 +2169,17 @@ TimeDate:AddToggle("Rainbow Color", false, function(on) ESP.Rainbow = on end)
 -- 5. AIMBOT & HITBOX SEKME
 local AimTab = Window:AddTab("Aimbot", "o")
 local a1 = AimTab:AddSection("Aimbot Settings")
-a1:AddToggle("Enable Aimbot", false, function(on)
-	Aim.Enabled = on
-	if not on then holdKey, holdBtn, latched, aimTarget = false, false, false, nil end
-end)
-a1:AddDropdown("Aim Mode", { "Hold", "Toggle", "Always" }, "Hold", function(o)
+a1:AddToggle("Enable Aimbot", false, function(on) Aim.Enabled = on end)
+a1:AddDropdown("Aim Mode", { "Hold", "Toggle", "Always" }, Aim.Mode, function(o)
 	Aim.Mode = o
 	latched = false
-	holdBtn = false
 end)
-a1:AddKeybind("Aimbot Key (PC)", { kind = "mouse", value = Enum.UserInputType.MouseButton2 }, function(b)
-	Aim.Key = b
-	holdKey, latched = false, false
-end)
+if not AIM_MOBILE then -- telefonda klavye/fare yok, tus ayari gosterilmez (ekrandaki buton kullanilir)
+	a1:AddKeybind("Aimbot Key", { kind = "mouse", value = Enum.UserInputType.MouseButton2 }, function(b)
+		Aim.Key = b
+		holding, latched = false, false
+	end)
+end
 a1:AddDropdown("Aim Part", { "Head", "Chest", "Root", "Closest" }, "Head", function(o) Aim.Part = o end)
 a1:AddDropdown("Target Priority", { "Closest to cursor", "Closest distance", "Lowest health" }, "Closest to cursor", function(o) Aim.Priority = o end)
 a1:AddSlider("FOV Radius", 30, 600, 150, function(v) Aim.FOV = v end)
@@ -2206,22 +2187,20 @@ a1:AddSlider("Max Distance", 50, 3000, 1000, function(v) Aim.MaxDistance = v end
 a1:AddToggle("Team Check", false, function(on) Aim.TeamCheck = on end)
 a1:AddToggle("Wall Check", false, function(on) Aim.WallCheck = on end)
 a1:AddToggle("Sticky Target", true, function(on) Aim.Sticky = on end)
-a1:AddToggle("Show FOV", false, function(on) Aim.ShowFOV = on end)
+a1:AddToggle("Show FOV", Aim.ShowFOV, function(on) Aim.ShowFOV = on end)
 a1:AddColorPicker("FOV Color", Aim.FOVColor, function(c) Aim.FOVColor = c end)
-
-local aMobile = AimTab:AddSection("Mobile / Touch")
-aMobile:AddLabel("Telefonda: AIM butonunu basili tut (Hold) veya dokun (Toggle).")
-aMobile:AddToggle("Show AIM Button", Aim.Button, function(on) Aim.Button = on end)
-aMobile:AddDropdown("Aim Center", { "Auto", "Screen", "Cursor" }, "Auto", function(o) Aim.Center = o end)
-aMobile:AddSlider("Button Size", 44, 120, Aim.BtnSize, function(v) Aim.BtnSize = v applyAimBtnLayout() end)
-aMobile:AddSlider("Button X (%)", 5, 95, Aim.BtnX, function(v) Aim.BtnX = v applyAimBtnLayout() end)
-aMobile:AddSlider("Button Y (%)", 10, 90, Aim.BtnY, function(v) Aim.BtnY = v applyAimBtnLayout() end)
 
 local aTuning = AimTab:AddSection("Aim Tuning")
 aTuning:AddSlider("Smoothness (0 = direct)", 0, 95, 0, function(v) Aim.Smooth = v end)
 aTuning:AddSlider("Aim offset Y (studs)", -3, 3, 0, function(v) Aim.YOffset = v end, 0.1)
 aTuning:AddToggle("Prediction", false, function(on) Aim.Prediction = on end)
 aTuning:AddSlider("Prediction strength", 0.01, 0.3, 0.1, function(v) Aim.PredStrength = v end, 0.01)
+
+local aBtn = AimTab:AddSection("Aim Button")
+aBtn:AddToggle("Show Aim Button", true, function(on) Aim.ShowButton = on end)
+aBtn:AddSlider("Button Size", 40, 110, Aim.ButtonSize, function(v) Aim.ButtonSize = v end, 2)
+aBtn:AddButton("Reset Button Position", function() AimButton.Reset() end)
+aBtn:AddLabel(AIM_MOBILE and "Dokun: Toggle'da ac/kapat, Hold'da basili tut. Surukleyerek tasi." or "Surukleyerek tasi. Toggle: tikla, Hold: basili tut. PC'de Mouse2 de calisir.")
 
 local a2 = AimTab:AddSection("Hitbox Integration")
 a2:AddToggle("Hitbox Enabled", false, function(on) Hit.Enabled = on end)
@@ -2248,7 +2227,7 @@ s1:AddToggle("Rainbow Accent", false, function(on)
 		Aurora:SetAccent(savedAccent, false)
 	end
 end)
-s1:AddSlider("Menu Scale (Boyut)", 0.4, 1.6, Aurora:GetMenuScale(), function(v)
+s1:AddSlider("Menu Scale (Boyut)", 0.4, 1.5, initialScale, function(v)
 	Aurora:SetMenuScale(v)
 end, 0.05)
 s1:AddButton("Reset Theme Colors", function()
