@@ -2410,3 +2410,6 @@ s2:AddButton("Reload UI", function() Aurora:Notify("Aurora X", "Zaten guncel.", 
 
 Window:Open()
 return Aurora
+
+
+
