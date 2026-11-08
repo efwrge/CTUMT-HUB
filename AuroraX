@@ -519,6 +519,82 @@ function Aurora:CreateWindow(titleText, subtitle)
 		end
 	end)
 
+	-- Sekme simgeleri: emoji/font yok, tamamen Frame ile cizilir ve tema/vurgu rengine uyar.
+	-- Sekme adina gore secilir (adi icinde anahtar kelime gecenler de eslesir).
+	local ICON_KEYS = {
+		{ "home", "home" }, { "player", "player" }, { "visual", "visuals" }, { "esp", "esp" },
+		{ "aim", "aimbot" }, { "hit", "hitbox" }, { "setting", "settings" }, { "config", "settings" },
+	}
+	local function tabIconKind(tabName)
+		local lower = string.lower(tabName or "")
+		for _, k in ipairs(ICON_KEYS) do
+			if string.find(lower, k[1], 1, true) then return k[2] end
+		end
+		return nil
+	end
+
+	-- 20x20 alana simge cizer, renk degistirme fonksiyonu dondurur
+	local function buildTabIcon(kind, parent)
+		local fills, strokes = {}, {}
+		local box = new("Frame", { Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1 })
+		local function round(f, r)
+			if r == "c" then
+				new("UICorner", { CornerRadius = UDim.new(0.5, 0) }).Parent = f
+			elseif r then
+				new("UICorner", { CornerRadius = UDim.new(0, r) }).Parent = f
+			end
+		end
+		local function rect(x, y, w, h, r, rot) -- dolu parca
+			local f = new("Frame", { Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), BackgroundColor3 = T.dim, BorderSizePixel = 0, Rotation = rot or 0 })
+			round(f, r)
+			f.Parent = box
+			table.insert(fills, f)
+		end
+		local function ring(x, y, w, h, r, thick) -- cizgi (ici bos) parca
+			local f = new("Frame", { Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), BackgroundTransparency = 1, BorderSizePixel = 0 })
+			round(f, r)
+			local st = new("UIStroke", { Thickness = thick or 1.6, Color = T.dim, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+			st.Parent = f
+			f.Parent = box
+			table.insert(strokes, st)
+		end
+
+		if kind == "home" then
+			rect(4, 10, 12, 8, 2)
+			rect(4, 2, 12, 12, 2, 45)
+		elseif kind == "player" then
+			rect(6, 1, 8, 8, "c")
+			rect(3, 11, 14, 8, 4)
+		elseif kind == "visuals" then
+			ring(2, 5, 16, 10, 5, 1.6)
+			rect(7, 7, 6, 6, "c")
+		elseif kind == "esp" then
+			rect(2, 2, 6, 2) rect(2, 2, 2, 6)
+			rect(12, 2, 6, 2) rect(16, 2, 2, 6)
+			rect(2, 16, 6, 2) rect(2, 12, 2, 6)
+			rect(12, 16, 6, 2) rect(16, 12, 2, 6)
+			rect(8, 8, 4, 4, "c")
+		elseif kind == "aimbot" then
+			ring(3, 3, 14, 14, "c", 1.6)
+			rect(9, 0, 2, 5) rect(9, 15, 2, 5)
+			rect(0, 9, 5, 2) rect(15, 9, 5, 2)
+			rect(8, 8, 4, 4, "c")
+		elseif kind == "hitbox" then
+			ring(2, 7, 10, 10, 2, 1.6)
+			ring(8, 2, 10, 10, 2, 1.6)
+		elseif kind == "settings" then
+			rect(2, 4, 7, 2, 1) rect(11, 2, 6, 6, "c")
+			rect(12, 9, 6, 2, 1) rect(4, 7, 6, 6, "c")
+			rect(2, 14, 8, 2, 1) rect(12, 12, 6, 6, "c")
+		end
+
+		box.Parent = parent
+		return function(c)
+			for _, f in ipairs(fills) do f.BackgroundColor3 = c end
+			for _, st in ipairs(strokes) do st.Color = c end
+		end
+	end
+
 	function Window:AddTab(name, glyph)
 		local btn = new("TextButton", { Text = "", Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, AutoButtonColor = false, LayoutOrder = #tabList:GetChildren() })
 		local bg = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = accent, BackgroundTransparency = 1, BorderSizePixel = 0 }, { corner(11) })
@@ -529,6 +605,15 @@ function Aurora:CreateWindow(titleText, subtitle)
 		bar.Parent = btn
 		local g = label({ Text = "", Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = T.dim, TextXAlignment = Enum.TextXAlignment.Center, Size = UDim2.fromOffset(34, 40), Position = UDim2.fromOffset(4, 0) })
 		g.Parent = btn
+		local ikind = tabIconKind(name)
+		if ikind then
+			-- cizilmis simge: glyph etiketinin rengi (secili/degil/vurgu) simgeyi de boyar
+			local setIc = buildTabIcon(ikind, g)
+			setIc(g.TextColor3)
+			g:GetPropertyChangedSignal("TextColor3"):Connect(function() setIc(g.TextColor3) end)
+		else
+			g.Text = (glyph and glyph ~= "" and glyph ~= "o") and glyph or string.upper(string.sub(name or "?", 1, 1))
+		end
 		local tx = label({ Text = name, Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = T.sub, Size = UDim2.new(1, -44, 1, 0), Position = UDim2.fromOffset(40, 0) })
 		tx.Parent = btn
 		onAccent(function(a) if current == name then g.TextColor3 = a end end)
@@ -1752,9 +1837,10 @@ table.insert(conns, UIS.InputEnded:Connect(function(input)
 end))
 
 ------------------------------------------------------------------ AIM BUTONU (surukle + bas)
+-- SADECE MOBILDE (saf dokunmatik cihaz) olusur, PC'de hic cikmaz.
 -- Aimbot acikken ekranda belirir. Surukleyerek tasinir.
 -- Toggle modu: dokun = ac/kapat | Hold modu: basili tut = nisan al | Always: sadece gosterge
-do
+if AIM_MOBILE then
 	local aimBtn = new("TextButton", {
 		Name = "AimButton", Text = "", AutoButtonColor = false, AnchorPoint = Vector2.new(0.5, 0.5),
 		Size = UDim2.fromOffset(Aim.ButtonSize, Aim.ButtonSize), BackgroundColor3 = T.card, BorderSizePixel = 0,
@@ -2196,11 +2282,13 @@ aTuning:AddSlider("Aim offset Y (studs)", -3, 3, 0, function(v) Aim.YOffset = v 
 aTuning:AddToggle("Prediction", false, function(on) Aim.Prediction = on end)
 aTuning:AddSlider("Prediction strength", 0.01, 0.3, 0.1, function(v) Aim.PredStrength = v end, 0.01)
 
-local aBtn = AimTab:AddSection("Aim Button")
-aBtn:AddToggle("Show Aim Button", true, function(on) Aim.ShowButton = on end)
-aBtn:AddSlider("Button Size", 40, 110, Aim.ButtonSize, function(v) Aim.ButtonSize = v end, 2)
-aBtn:AddButton("Reset Button Position", function() AimButton.Reset() end)
-aBtn:AddLabel(AIM_MOBILE and "Dokun: Toggle'da ac/kapat, Hold'da basili tut. Surukleyerek tasi." or "Surukleyerek tasi. Toggle: tikla, Hold: basili tut. PC'de Mouse2 de calisir.")
+if AIM_MOBILE then -- ekrandaki aim butonu ayarlari sadece telefonda gorunur
+	local aBtn = AimTab:AddSection("Aim Button")
+	aBtn:AddToggle("Show Aim Button", true, function(on) Aim.ShowButton = on end)
+	aBtn:AddSlider("Button Size", 40, 110, Aim.ButtonSize, function(v) Aim.ButtonSize = v end, 2)
+	aBtn:AddButton("Reset Button Position", function() AimButton.Reset() end)
+	aBtn:AddLabel("Dokun: Toggle'da ac/kapat, Hold'da basili tut. Surukleyerek tasi.")
+end
 
 local a2 = AimTab:AddSection("Hitbox Integration")
 a2:AddToggle("Hitbox Enabled", false, function(on) Hit.Enabled = on end)
