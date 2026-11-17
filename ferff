@@ -1,0 +1,67 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- 1. Kamerayı iç kameradan çıkarıp normale döndüren fonksiyon
+local function fixCamera()
+	-- Oyuncunun kamera modunu klasik (dış kamera) yap
+	player.CameraMode = Enum.CameraMode.Classic
+	player.CameraMinZoomDistance = 0.5
+	player.CameraMaxZoomDistance = 128
+	
+	-- Kamera tipini oyuncuyu takip edecek şekilde ayarla
+	if camera.CameraType ~= Enum.CameraType.Custom then
+		camera.CameraType = Enum.CameraType.Custom
+	end
+	
+	-- Kameranın odağını karaktere ver
+	if player.Character and player.Character:FindFirstChild("Humanoid") then
+		camera.CameraSubject = player.Character.Humanoid
+	end
+end
+
+-- 2. Mobil cihazlarda yürümeyi ve kamerayı kilitleyen GUI ayarlarını düzelten fonksiyon
+local function fixMobileGuiControls(guiObject)
+	-- Eğer bir butonun "Modal" özelliği açıksa, fareyi ortada kilitler ve mobilde dokunmayı bozar
+	if guiObject:IsA("GuiButton") then
+		guiObject.Modal = false
+	end
+	
+	-- Ekranı kaplayan şeffaf Frame'lerin dokunmatik kontrolleri (Thumbstick) engellemesini önle
+	if guiObject:IsA("Frame") or guiObject:IsA("ImageLabel") or guiObject:IsA("TextLabel") then
+		-- Eğer arka plan tamamen şeffafsa dokunmaları arkaya geçir
+		if guiObject.BackgroundTransparency == 1 then
+			guiObject.Active = false
+		end
+	end
+end
+
+-- Başlangıçta kamerayı düzelt
+fixCamera()
+
+-- Karakter her yeniden doğduğunda (respawn) kamerayı tekrar düzelt
+player.CharacterAdded:Connect(function()
+	task.wait(0.1)
+	fixCamera()
+end)
+
+-- Mevcut tüm GUI elemanlarını tara ve mobil kilidini aç
+for _, item in ipairs(playerGui:GetDescendants()) do
+	fixMobileGuiControls(item)
+end
+
+-- Oyuna sonradan eklenen veya açılan GUI'leri otomatik düzelt
+playerGui.DescendantAdded:Connect(function(item)
+	fixMobileGuiControls(item)
+end)
+
+-- Eğer başka bir script kamerayı sürekli iç kameraya zorluyorsa bunu engelle
+RunService.RenderStepped:Connect(function()
+	if player.CameraMode == Enum.CameraMode.LockFirstPerson then
+		player.CameraMode = Enum.CameraMode.Classic
+	end
+end)
